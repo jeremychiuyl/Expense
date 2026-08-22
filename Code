@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>即時蛇形選秀系統</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
+    h1, h2 { text-align: center; }
+    .status-bar { text-align: center; font-size: 1.2rem; margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; }
+    .identity-select { text-align: center; margin-bottom: 20px; }
+    .container { display: flex; gap: 20px; flex-wrap: wrap; }
+    .pool, .teams { background: #fff; padding: 15px; border-radius: 8px; flex: 1; min-width: 280px; }
+    .player-btn { display: inline-block; margin: 5px; padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .player-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .team-box { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 6px; }
+  </style>
+
+  <!-- 引入 Firebase SDK (v9/10 Compatibility Mode，適合簡單單檔) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <h1>🏆 隊長蛇形選秀網頁</h1>
+
+  <div class="identity-select">
+    <label><b>選擇你的身份：</b></label>
+    <select id="roleSelect" onchange="changeRole()">
+      <option value="Viewer">觀眾 (僅觀看)</option>
+      <option value="Captain_A">隊長 A</option>
+      <option value="Captain_B">隊長 B</option>
+      <option value="Captain_C">隊長 C</option>
+      <option value="Captain_D">隊長 D</option>
+    </select>
+  </div>
+
+  <div class="status-bar" id="statusBar">載入中...</div>
+
+  <div class="container">
+    <!-- 候選球員池 -->
+    <div class="pool">
+      <h2>候選球員 Pool (點擊選擇)</h2>
+      <div id="playerPool"></div>
+    </div>
+
+    <!-- 四隊陣容 -->
+    <div class="teams">
+      <h2>各隊陣容</h2>
+      <div class="team-box"><h3>隊長 A</h3><ul id="team-Captain_A"></ul></div>
+      <div class="team-box"><h3>隊長 B</h3><ul id="team-Captain_B"></ul></div>
+      <div class="team-box"><h3>隊長 C</h3><ul id="team-Captain_C"></ul></div>
+      <div class="team-box"><h3>隊長 D</h3><ul id="team-Captain_D"></ul></div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Firebase 權限配置 (請替換成你在 Firebase Console 申請到的資訊)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 初始化 Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 蛇形選秀 16 步順序表
+    const snakeOrder = [
+      "Captain_A", "Captain_B", "Captain_C", "Captain_D",
+      "Captain_D", "Captain_C", "Captain_B", "Captain_A",
+      "Captain_A", "Captain_B", "Captain_C", "Captain_D",
+      "Captain_D", "Captain_C", "Captain_B", "Captain_A"
+    ];
+
+    let myRole = "Viewer";
+
+    function changeRole() {
+      myRole = document.getElementById("roleSelect").value;
+      alert("已切換身份為：" + myRole);
+    }
+
+    // 初始化資料庫資料 (如果尚未初始化)
+    function initDraft() {
+      const initialPlayers = {};
+      for (let i = 1; i <= 16; i++) {
+        initialPlayers['p' + i] = { id: 'p' + i, name: '選手 ' + i, pickedBy: null };
+      }
+      db.ref("draft").set({
+        turnIndex: 0,
+        players: initialPlayers
+      });
+    }
+
+    // 2. 選人邏輯 (使用 Transaction 防止同時搶人)
+    function pickPlayer(playerId) {
+      const draftRef = db.ref("draft");
+      
+      draftRef.transaction((currentData) => {
+        if (!currentData) return currentData;
+
+        const turnIndex = currentData.turnIndex;
+        if (turnIndex >= snakeOrder.length) return; // 已結束
+
+        const expectedCaptain = snakeOrder[turnIndex];
+
+        // 檢查是不是輪到該隊長
+        if (myRole !== expectedCaptain) {
+          return; // 不是你，不進行任何改變
+        }
+
+        // 檢查球員是否未被選
+        if (currentData.players[playerId] && !currentData.players[playerId].pickedBy) {
+          currentData.players[playerId].pickedBy = myRole;
+          currentData.turnIndex = turnIndex + 1; // 輪到下一位
+        }
+
+        return currentData;
+      }, (error, committed, snapshot) => {
+        if (error) {
+          alert("選人失敗，請重試");
+        } else if (!committed) {
+          alert("動作無效：可能尚未輪到你，或該選手已被搶選！");
+        }
+      });
+    }
+
+    // 3. 即時監聽資料庫變動 (Realtime Update)
+    db.ref("draft").on("value", (snapshot) => {
+      const data = snapshot.val();
+      
+      // 如果資料庫空的，自動初始化
+      if (!data) {
+        initDraft();
+        return;
+      }
+
+      const turnIndex = data.turnIndex;
+      const players = data.players || {};
+
+      // 更新狀態列
+      const statusBar = document.getElementById("statusBar");
+      if (turnIndex < snakeOrder.length) {
+        const currentCaptain = snakeOrder[turnIndex];
+        const round = Math.floor(turnIndex / 4) + 1;
+        statusBar.innerHTML = `當前：<b>Round ${round}</b> | 輪到 <b>${currentCaptain}</b> 選人`;
+        statusBar.style.color = (myRole === currentCaptain) ? "green" : "black";
+      } else {
+        statusBar.innerHTML = "<b>🎉 選秀已全部完成！</b>";
+        statusBar.style.color = "blue";
+      }
+
+      // 清空畫面
+      document.getElementById("playerPool").innerHTML = "";
+      ["Captain_A", "Captain_B", "Captain_C", "Captain_D"].forEach(c => {
+        document.getElementById("team-" + c).innerHTML = "";
+      });
+
+      // 渲染球員池與隊伍名單
+      Object.values(players).forEach(player => {
+        if (!player.pickedBy) {
+          // 仍在 Pool 內
+          const btn = document.createElement("button");
+          btn.className = "player-btn";
+          btn.innerText = player.name;
+          
+          // 若輪到我且我是隊長，才可點擊
+          const currentCaptain = snakeOrder[turnIndex];
+          btn.disabled = (myRole !== currentCaptain || turnIndex >= snakeOrder.length);
+          
+          btn.onclick = () => pickPlayer(player.id);
+          document.getElementById("playerPool").appendChild(btn);
+        } else {
+          // 已被選走，放入對應隊伍
+          const li = document.createElement("li");
+          li.innerText = player.name;
+          const teamList = document.getElementById("team-" + player.pickedBy);
+          if (teamList) teamList.appendChild(li);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
