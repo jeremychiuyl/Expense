@@ -1,947 +1,577 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Expense Tracker Dashboard</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Expense Tracker & Dashboard</title>
+    
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Expenses">
+
+    <!-- Tailwind CSS (Play CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 8px;
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col pb-20 sm:pb-0">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col pb-24 md:pb-8">
 
-    <!-- Top Navigation Bar (Mobile & Desktop) -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md flex items-center justify-center">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/30">
                     <i class="fa-solid fa-wallet text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">SpendPulse</h1>
-                    <p class="text-[11px] sm:text-xs text-slate-500">Mobile Expense Tracker</p>
+                    <h1 class="font-bold text-lg tracking-tight">ExpenseFlow</h1>
+                    <p class="text-xs text-slate-400">Daily Finance Dashboard</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2 sm:space-x-3">
-                <button onclick="openExportModal()" class="p-2.5 sm:px-3.5 sm:py-2 border border-slate-300 text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm" title="Export / Import">
-                    <i class="fa-solid fa-download sm:mr-2 text-slate-500"></i><span class="hidden sm:inline">Export / Import</span>
+            <div class="flex items-center space-x-2">
+                <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-sm font-medium shadow-md shadow-blue-600/30 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">Add Expense</span>
                 </button>
-                <button onclick="openExpenseModal()" class="hidden sm:inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
-                    <i class="fa-solid fa-plus mr-2"></i> Add Expense
-                </button>
+                <div class="relative">
+                    <button onclick="toggleMenu()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1 z-50">
+                        <button onclick="exportData()" class="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 flex items-center space-x-2">
+                            <i class="fa-solid fa-download w-5 text-blue-400"></i><span>Export Backup</span>
+                        </button>
+                        <label class="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 flex items-center space-x-2 cursor-pointer">
+                            <i class="fa-solid fa-upload w-5 text-emerald-400"></i><span>Import Backup</span>
+                            <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow space-y-6">
 
-        <!-- Mobile Tab Views / Desktop Grid Container -->
-        <!-- Tab 1: Dashboard View -->
-        <div id="tab-dashboard" class="tab-content active space-y-6">
-            <!-- KPI Summary Cards -->
-            <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                <!-- Total Expenses -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Total</span>
-                        <div class="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                            <i class="fa-solid fa-coins text-sm sm:text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div id="kpi-total" class="text-lg sm:text-2xl font-bold text-slate-900">$0.00</div>
-                        <span class="text-[10px] sm:text-xs text-slate-500">All Time</span>
-                    </div>
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+                    <span>Total Expenses</span>
+                    <i class="fa-solid fa-coins text-blue-400"></i>
                 </div>
-
-                <!-- Monthly Expenses -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">This Month</span>
-                        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                            <i class="fa-solid fa-calendar-days text-sm sm:text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div id="kpi-month" class="text-lg sm:text-2xl font-bold text-slate-900">$0.00</div>
-                        <span class="text-[10px] sm:text-xs text-emerald-600 font-medium">Active Month</span>
-                    </div>
+                <div id="kpiTotal" class="text-2xl font-bold mt-2 text-slate-100">$0.00</div>
+                <div class="text-xs text-slate-500 mt-1">All recorded time</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+                    <span>This Month</span>
+                    <i class="fa-solid fa-calendar-days text-emerald-400"></i>
                 </div>
-
-                <!-- Average Daily Spend -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Daily Avg</span>
-                        <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                            <i class="fa-solid fa-chart-line text-sm sm:text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div id="kpi-daily-avg" class="text-lg sm:text-2xl font-bold text-slate-900">$0.00</div>
-                        <span class="text-[10px] sm:text-xs text-slate-500">Per Day</span>
-                    </div>
+                <div id="kpiMonth" class="text-2xl font-bold mt-2 text-slate-100">$0.00</div>
+                <div id="kpiMonthName" class="text-xs text-emerald-400 mt-1">Current month</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+                    <span>Daily Average</span>
+                    <i class="fa-solid fa-chart-line text-amber-400"></i>
                 </div>
-
-                <!-- Top Category -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Top Category</span>
-                        <div class="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                            <i class="fa-solid fa-tag text-sm sm:text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div id="kpi-top-category" class="text-base sm:text-xl font-bold text-slate-900 truncate">None</div>
-                        <span id="kpi-top-category-amount" class="text-[10px] sm:text-xs font-semibold text-slate-500">$0.00</span>
-                    </div>
+                <div id="kpiDailyAvg" class="text-2xl font-bold mt-2 text-slate-100">$0.00</div>
+                <div class="text-xs text-slate-500 mt-1">This month avg</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
+                    <span>Top Category</span>
+                    <i class="fa-solid fa-tag text-purple-400"></i>
                 </div>
-            </section>
-
-            <!-- Charts Section -->
-            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Spending Over Time Line Chart -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm lg:col-span-2 flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-sm sm:text-base font-bold text-slate-900">Spending Trend</h3>
-                            <p class="text-[11px] sm:text-xs text-slate-500">Daily spending over the current month</p>
-                        </div>
-                        <div class="flex space-x-2">
-                            <select id="chart-month-select" onchange="updateCharts()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <!-- Populated via JS -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="relative flex-1 min-h-[220px] sm:min-h-[280px]">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Category Breakdown Doughnut Chart -->
-                <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Category Breakdown</h3>
-                        <p class="text-[11px] sm:text-xs text-slate-500">Distribution of expenses</p>
-                    </div>
-                    <div class="relative flex-1 min-h-[200px] sm:min-h-[240px] flex items-center justify-center">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                    <div id="category-legend" class="mt-4 space-y-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-                        <!-- Populated via JS -->
-                    </div>
-                </div>
-            </section>
+                <div id="kpiTopCategory" class="text-xl font-bold mt-2 text-slate-100 truncate">None</div>
+                <div id="kpiTopCatAmount" class="text-xs text-purple-400 mt-1">$0.00 spent</div>
+            </div>
         </div>
 
-        <!-- Tab 2: Transactions View -->
-        <div id="tab-transactions" class="tab-content space-y-4">
-            <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <!-- Table Header & Controls -->
-                <div class="p-4 sm:p-6 border-b border-slate-200 flex flex-col gap-3">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-base sm:text-lg font-bold text-slate-900">Transaction History</h3>
-                            <p class="text-xs text-slate-500">Search and filter your expenses</p>
-                        </div>
-                        <button onclick="openExpenseModal()" class="sm:hidden inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium shadow">
-                            <i class="fa-solid fa-plus mr-1"></i> Add
-                        </button>
-                    </div>
-                    <!-- Filters & Search Toolbar -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <!-- Search Input -->
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-search text-xs"></i>
-                            </span>
-                            <input type="text" id="search-input" oninput="filterTransactions()" placeholder="Search description..." 
-                                class="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full">
-                        </div>
-                        <!-- Category Filter -->
-                        <select id="filter-category" onchange="filterTransactions()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Categories</option>
-                            <option value="Food">Food</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Utilities">Utilities</option>
-                            <option value="Entertainment">Entertainment</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Health">Health</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <!-- Payment Method Filter -->
-                        <select id="filter-payment" onchange="filterTransactions()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Payment Methods</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="Debit Card">Debit Card</option>
-                            <option value="Mobile Wallet">Mobile Wallet</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                        </select>
-                    </div>
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Daily Spending Trend Line Chart -->
+            <div class="lg:col-span-2 bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-base text-slate-200">Spending Trend</h2>
+                    <input type="month" id="trendMonthSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500" onchange="updateCharts()">
                 </div>
+                <div class="relative flex-grow h-64 md:h-72">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
 
-                <!-- Table for Desktop / Card List for Mobile -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse hidden sm:table">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
-                                <th class="py-3 px-6">Date</th>
-                                <th class="py-3 px-6">Description</th>
-                                <th class="py-3 px-6">Category</th>
-                                <th class="py-3 px-6">Payment Method</th>
-                                <th class="py-3 px-6 text-right">Amount</th>
-                                <th class="py-3 px-6 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transaction-table-body" class="divide-y divide-slate-200 text-sm text-slate-700">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                    <!-- Mobile List View -->
-                    <div id="transaction-mobile-list" class="divide-y divide-slate-100 sm:hidden">
-                        <!-- Populated via JS -->
-                    </div>
+            <!-- Category Doughnut Chart -->
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col">
+                <h2 class="font-semibold text-base text-slate-200 mb-4">Category Breakdown</h2>
+                <div class="relative h-48 flex justify-center items-center">
+                    <canvas id="categoryChart"></canvas>
                 </div>
-
-                <!-- Empty State -->
-                <div id="empty-state" class="hidden py-16 text-center">
-                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                        <i class="fa-solid fa-receipt"></i>
-                    </div>
-                    <h4 class="text-base font-semibold text-slate-800">No transactions found</h4>
-                    <p class="text-xs text-slate-500 mt-1">Get started by adding your first daily expense.</p>
-                    <button onclick="openExpenseModal()" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-sm">
-                        <i class="fa-solid fa-plus mr-2"></i> Add Expense
-                    </button>
-                </div>
-            </section>
+                <div id="categoryLegend" class="mt-4 space-y-2 overflow-y-auto max-h-36 pr-1 text-xs"></div>
+            </div>
         </div>
+
+        <!-- Transactions Section -->
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
+            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-5">
+                <h2 class="font-semibold text-base text-slate-200">Recent Transactions</h2>
+                
+                <!-- Search & Filters -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative flex-grow md:flex-grow-0">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="Search title..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl pl-8 pr-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500 w-full md:w-48" oninput="renderTransactions()">
+                    </div>
+                    <select id="filterCategory" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500" onchange="renderTransactions()">
+                        <option value="">All Categories</option>
+                        <option value="Food">Food & Dining</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Utilities">Utilities & Bills</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Health">Health & Fitness</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Transactions List -->
+            <div id="transactionList" class="divide-y divide-slate-800/60 overflow-x-auto">
+                <!-- Populated via JavaScript -->
+            </div>
+        </div>
+
     </main>
 
     <!-- Mobile Bottom Navigation Bar -->
-    <nav class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-6 py-2 flex justify-around items-center shadow-lg">
-        <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="flex flex-col items-center py-1 text-indigo-600 transition">
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-6 py-3 flex justify-around items-center z-30">
+        <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="flex flex-col items-center text-blue-500 text-xs">
             <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
-            <span class="text-[10px] font-semibold">Dashboard</span>
+            <span>Dashboard</span>
         </button>
-        <button onclick="openExpenseModal()" class="flex flex-col items-center -mt-5 bg-indigo-600 text-white p-3.5 rounded-full shadow-lg shadow-indigo-300 transition hover:bg-indigo-700">
+        <button onclick="openModal()" class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 -mt-6 border-4 border-slate-950">
             <i class="fa-solid fa-plus text-lg"></i>
         </button>
-        <button onclick="switchTab('transactions')" id="nav-btn-transactions" class="flex flex-col items-center py-1 text-slate-400 transition">
+        <button onclick="scrollToTransactions()" class="flex flex-col items-center text-slate-400 text-xs hover:text-slate-200">
             <i class="fa-solid fa-list-ul text-lg mb-0.5"></i>
-            <span class="text-[10px] font-semibold">History</span>
+            <span>History</span>
         </button>
-    </nav>
+    </div>
 
-    <footer class="hidden sm:block mt-auto bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-        <p>&copy; 2026 SpendPulse Expense Tracker. All data is saved securely in your browser's local storage.</p>
-    </footer>
-
-    <!-- Add / Edit Expense Modal -->
-    <div id="expense-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center sm:p-4">
-        <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-200 transform transition-all max-h-[90vh] flex flex-col">
-            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
-                <h3 id="modal-title" class="text-base sm:text-lg font-bold text-slate-900">Add New Expense</h3>
-                <button onclick="closeExpenseModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition">
+    <!-- Add/Edit Modal -->
+    <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="font-bold text-lg text-slate-100">Add New Expense</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <form id="expense-form" onsubmit="handleExpenseSubmit(event)" class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
-                <input type="hidden" id="expense-id">
-                
+            
+            <form id="expenseForm" onsubmit="saveExpense(event)" class="space-y-4">
+                <input type="hidden" id="expenseId">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Description / Title</label>
-                    <input type="text" id="expense-title" required placeholder="e.g., Grocery shopping"
-                        class="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Title / Description</label>
+                    <input type="text" id="title" required placeholder="e.g., Grocery shopping, Coffee" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Amount ($)</label>
-                        <input type="number" step="0.01" min="0.01" id="expense-amount" required placeholder="0.00"
-                            class="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Amount ($)</label>
+                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date</label>
-                        <input type="date" id="expense-date" required
-                            class="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Date</label>
+                        <input type="date" id="date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Category</label>
-                        <select id="expense-category" required
-                            class="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Food">Food</option>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Category</label>
+                        <select id="category" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="Food">Food & Dining</option>
                             <option value="Transport">Transport</option>
-                            <option value="Utilities">Utilities</option>
+                            <option value="Utilities">Utilities & Bills</option>
                             <option value="Entertainment">Entertainment</option>
                             <option value="Shopping">Shopping</option>
-                            <option value="Health">Health</option>
+                            <option value="Health">Health & Fitness</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Payment Method</label>
-                        <select id="expense-payment" required
-                            class="w-full px-3.5 py-3 sm:py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Cash">Cash</option>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Payment Method</label>
+                        <select id="paymentMethod" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                             <option value="Credit Card">Credit Card</option>
                             <option value="Debit Card">Debit Card</option>
-                            <option value="Mobile Wallet">Mobile Wallet</option>
+                            <option value="Cash">Cash</option>
                             <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Mobile Wallet">Mobile Wallet</option>
                         </select>
                     </div>
                 </div>
-
-                <div class="pt-4 flex items-center justify-end space-x-3 border-t border-slate-200">
-                    <button type="button" onclick="closeExpenseModal()" class="px-4 py-3 sm:py-2 border border-slate-300 text-sm font-medium rounded-xl text-slate-700 bg-white hover:bg-slate-50 transition w-full sm:w-auto">
-                        Cancel
-                    </button>
-                    <button type="submit" class="px-5 py-3 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition shadow-md shadow-indigo-200 w-full sm:w-auto">
-                        Save Expense
-                    </button>
+                <div class="flex justify-end space-x-3 pt-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition">Save Expense</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Export / Import Modal -->
-    <div id="export-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center sm:p-4">
-        <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-200 transform transition-all max-h-[90vh] flex flex-col">
-            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
-                <h3 class="text-base sm:text-lg font-bold text-slate-900">Data Management</h3>
-                <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                <div>
-                    <h4 class="text-sm font-semibold text-slate-800 mb-1">Export Data</h4>
-                    <p class="text-xs text-slate-500 mb-3">Download a backup JSON file of all your recorded expenses.</p>
-                    <button onclick="exportDataJSON()" class="w-full inline-flex items-center justify-center px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition border border-slate-300">
-                        <i class="fa-solid fa-file-arrow-down mr-2 text-indigo-600"></i> Download JSON Backup
-                    </button>
-                </div>
-
-                <hr class="border-slate-200">
-
-                <div>
-                    <h4 class="text-sm font-semibold text-slate-800 mb-1">Import Data</h4>
-                    <p class="text-xs text-slate-500 mb-3">Restore expenses from a previously exported JSON backup file.</p>
-                    <label class="w-full inline-flex items-center justify-center px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-xl transition cursor-pointer border border-indigo-200">
-                        <i class="fa-solid fa-file-arrow-up mr-2"></i> Upload JSON Backup
-                        <input type="file" id="import-file-input" accept=".json" onchange="importDataJSON(event)" class="hidden">
-                    </label>
-                </div>
-
-                <hr class="border-slate-200">
-
-                <div>
-                    <h4 class="text-sm font-semibold text-rose-600 mb-1">Danger Zone</h4>
-                    <p class="text-xs text-slate-500 mb-3">Clear all transaction history from local storage.</p>
-                    <button onclick="clearAllData()" class="w-full inline-flex items-center justify-center px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-medium rounded-xl transition border border-rose-200">
-                        <i class="fa-solid fa-triangle-exclamation mr-2"></i> Delete All Data
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-20 sm:bottom-5 left-4 right-4 sm:left-auto sm:right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex justify-center">
-        <div id="toast-content" class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-sm">
-            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
-            <span id="toast-message">Action successful!</span>
-        </div>
-    </div>
-
-    <!-- JavaScript Application Logic -->
+    <!-- Application Script -->
     <script>
-        let expenses = [];
+        // Category Icons & Colors mapping
+        const categoryMeta = {
+            'Food': { icon: 'fa-utensils', color: '#3b82f6' },
+            'Transport': { icon: 'fa-car', color: '#10b981' },
+            'Utilities': { icon: 'fa-bolt', color: '#f59e0b' },
+            'Entertainment': { icon: 'fa-gamepad', color: '#ec4899' },
+            'Shopping': { icon: 'fa-bag-shopping', color: '#8b5cf6' },
+            'Health': { icon: 'fa-heart-pulse', color: '#ef4444' },
+            'Other': { icon: 'fa-box-archive', color: '#64748b' }
+        };
+
+        let expenses = JSON.parse(localStorage.getItem('expenses')) || [
+            { id: '1', title: 'Morning Coffee', amount: 4.50, date: new Date().toISOString().split('T')[0], category: 'Food', paymentMethod: 'Mobile Wallet' },
+            { id: '2', title: 'Groceries at Supermarket', amount: 65.20, date: new Date(Date.now()-86400000).toISOString().split('T')[0], category: 'Food', paymentMethod: 'Credit Card' },
+            { id: '3', title: 'Subway Monthly Pass', amount: 85.00, date: new Date(Date.now()-172800000).toISOString().split('T')[0], category: 'Transport', paymentMethod: 'Credit Card' }
+        ];
+
         let trendChartInstance = null;
         let categoryChartInstance = null;
 
-        const categoryColors = {
-            'Food': '#f59e0b',       // Amber
-            'Transport': '#3b82f6',  // Blue
-            'Utilities': '#8b5cf6',  // Purple
-            'Entertainment': '#ec4899',// Pink
-            'Shopping': '#10b981',   // Emerald
-            'Health': '#06b6d4',     // Cyan
-            'Other': '#64748b'       // Slate
-        };
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set default month selector value to current year-month
+            const now = new Date();
+            const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('trendMonthSelect').value = yearMonth;
+            document.getElementById('date').valueAsDate = new Date();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadExpenses();
-            initDateFilterDropdown();
-            document.getElementById('expense-date').valueAsDate = new Date();
-            renderDashboard();
+            updateAll();
         });
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-
-            const dashBtn = document.getElementById('nav-btn-dashboard');
-            const txBtn = document.getElementById('nav-btn-transactions');
-
-            if (tabName === 'dashboard') {
-                dashBtn.className = 'flex flex-col items-center py-1 text-indigo-600 transition';
-                txBtn.className = 'flex flex-col items-center py-1 text-slate-400 transition';
-                if (trendChartInstance) trendChartInstance.resize();
-                if (categoryChartInstance) categoryChartInstance.resize();
-            } else {
-                txBtn.className = 'flex flex-col items-center py-1 text-indigo-600 transition';
-                dashBtn.className = 'flex flex-col items-center py-1 text-slate-400 transition';
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        function updateAll() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            updateKPIs();
+            updateCharts();
+            renderTransactions();
         }
 
-        function loadExpenses() {
-            const stored = localStorage.getItem('spendpulse_expenses');
-            if (stored) {
-                try {
-                    expenses = JSON.parse(stored);
-                } catch (e) {
-                    expenses = [];
+        function scrollToTransactions() {
+            document.getElementById('searchInput').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#dropdownMenu') && !e.target.closest('button[onclick="toggleMenu()"]')) {
+                document.getElementById('dropdownMenu').classList.add('hidden');
+            }
+        });
+
+        function openModal(id = null) {
+            document.getElementById('expenseModal').classList.remove('hidden');
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Expense';
+                const item = expenses.find(ex => ex.id === id);
+                if (item) {
+                    document.getElementById('expenseId').value = item.id;
+                    document.getElementById('title').value = item.title;
+                    document.getElementById('amount').value = item.amount;
+                    document.getElementById('date').value = item.date;
+                    document.getElementById('category').value = item.category;
+                    document.getElementById('paymentMethod').value = item.paymentMethod;
                 }
             } else {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                
-                expenses = [
-                    { id: '1', title: 'Supermarket Groceries', amount: 84.50, date: `${year}-${month}-02`, category: 'Food', paymentMethod: 'Credit Card' },
-                    { id: '2', title: 'Morning Coffee & Pastry', amount: 6.75, date: `${year}-${month}-03`, category: 'Food', paymentMethod: 'Mobile Wallet' },
-                    { id: '3', title: 'Monthly Metro Pass', amount: 65.00, date: `${year}-${month}-01`, category: 'Transport', paymentMethod: 'Debit Card' },
-                    { id: '4', title: 'Electricity Bill', amount: 92.40, date: `${year}-${month}-05`, category: 'Utilities', paymentMethod: 'Bank Transfer' },
-                    { id: '5', title: 'Cinema Tickets', amount: 28.00, date: `${year}-${month}-08`, category: 'Entertainment', paymentMethod: 'Credit Card' },
-                    { id: '6', title: 'New Running Shoes', amount: 110.00, date: `${year}-${month}-10`, category: 'Shopping', paymentMethod: 'Credit Card' },
-                    { id: '7', title: 'Pharmacy / Vitamins', amount: 24.50, date: `${year}-${month}-11`, category: 'Health', paymentMethod: 'Cash' }
-                ];
-                saveExpenses();
+                document.getElementById('modalTitle').innerText = 'Add New Expense';
+                document.getElementById('expenseForm').reset();
+                document.getElementById('expenseId').value = '';
+                document.getElementById('date').valueAsDate = new Date();
             }
         }
 
-        function saveExpenses() {
-            localStorage.setItem('spendpulse_expenses', JSON.stringify(expenses));
+        function closeModal() {
+            document.getElementById('expenseModal').classList.add('hidden');
         }
 
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const messageEl = document.getElementById('toast-message');
-            const iconEl = document.getElementById('toast-icon');
-            
-            messageEl.textContent = message;
-            if (type === 'success') {
-                iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            } else {
-                iconEl.className = 'fa-solid fa-circle-exclamation text-rose-400 text-lg';
-            }
-
-            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-            }, 3000);
-        }
-
-        function openExpenseModal(id = null) {
-            const modal = document.getElementById('expense-modal');
-            const titleEl = document.getElementById('modal-title');
-            const form = document.getElementById('expense-form');
-            
-            form.reset();
-            document.getElementById('expense-date').valueAsDate = new Date();
+        function saveExpense(e) {
+            e.preventDefault();
+            const id = document.getElementById('expenseId').value;
+            const title = document.getElementById('title').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
 
             if (id) {
-                titleEl.textContent = 'Edit Expense';
-                const expense = expenses.find(e => e.id === id);
-                if (expense) {
-                    document.getElementById('expense-id').value = expense.id;
-                    document.getElementById('expense-title').value = expense.title;
-                    document.getElementById('expense-amount').value = expense.amount;
-                    document.getElementById('expense-date').value = expense.date;
-                    document.getElementById('expense-category').value = expense.category;
-                    document.getElementById('expense-payment').value = expense.paymentMethod;
-                }
+                expenses = expenses.map(ex => ex.id === id ? { id, title, amount, date, category, paymentMethod } : ex);
             } else {
-                titleEl.textContent = 'Add New Expense';
-                document.getElementById('expense-id').value = '';
+                const newEx = { id: Date.now().toString(), title, amount, date, category, paymentMethod };
+                expenses.push(newEx);
             }
 
-            modal.classList.remove('hidden');
-        }
-
-        function closeExpenseModal() {
-            document.getElementById('expense-modal').classList.add('hidden');
-        }
-
-        function openExportModal() {
-            document.getElementById('export-modal').classList.remove('hidden');
-        }
-
-        function closeExportModal() {
-            document.getElementById('export-modal').classList.add('hidden');
-        }
-
-        function handleExpenseSubmit(event) {
-            event.preventDefault();
-            const id = document.getElementById('expense-id').value;
-            const title = document.getElementById('expense-title').value.trim();
-            const amount = parseFloat(document.getElementById('expense-amount').value);
-            const date = document.getElementById('expense-date').value;
-            const category = document.getElementById('expense-category').value;
-            const paymentMethod = document.getElementById('expense-payment').value;
-
-            if (!title || isNaN(amount) || !date) {
-                showToast('Please fill in all required fields correctly.', 'error');
-                return;
-            }
-
-            if (id) {
-                const index = expenses.findIndex(e => e.id === id);
-                if (index !== -1) {
-                    expenses[index] = { id, title, amount, date, category, paymentMethod };
-                    showToast('Expense updated successfully!');
-                }
-            } else {
-                const newExpense = {
-                    id: Date.now().toString(),
-                    title,
-                    amount,
-                    date,
-                    category,
-                    paymentMethod
-                };
-                expenses.unshift(newExpense);
-                showToast('Expense added successfully!');
-            }
-
-            saveExpenses();
-            closeExpenseModal();
-            renderDashboard();
+            closeModal();
+            updateAll();
         }
 
         function deleteExpense(id) {
-            if (confirm('Are you sure you want to delete this transaction?')) {
-                expenses = expenses.filter(e => e.id !== id);
-                saveExpenses();
-                renderDashboard();
-                showToast('Transaction deleted.');
+            if (confirm('Are you sure you want to delete this expense?')) {
+                expenses = expenses.filter(ex => ex.id !== id);
+                updateAll();
             }
-        }
-
-        function exportDataJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(expenses, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `spendpulse_backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            showToast('Backup exported successfully!');
-            closeExportModal();
-        }
-
-        function importDataJSON(event) {
-            const fileReader = new FileReader();
-            if (event.target.files[0]) {
-                fileReader.readAsText(event.target.files[0], "UTF-8");
-                fileReader.onload = function(e) {
-                    try {
-                        const imported = JSON.parse(e.target.result);
-                        if (Array.isArray(imported)) {
-                            expenses = imported;
-                            saveExpenses();
-                            renderDashboard();
-                            showToast('Data imported successfully!');
-                            closeExportModal();
-                        } else {
-                            throw new Error('Invalid format');
-                        }
-                    } catch (err) {
-                        showToast('Invalid backup file format.', 'error');
-                    }
-                };
-            }
-        }
-
-        function clearAllData() {
-            if (confirm('WARNING: This will permanently delete all your recorded expenses. Are you sure?')) {
-                expenses = [];
-                saveExpenses();
-                renderDashboard();
-                showToast('All data cleared.');
-                closeExportModal();
-            }
-        }
-
-        function renderDashboard() {
-            updateKPIs();
-            initDateFilterDropdown();
-            updateCharts();
-            filterTransactions();
         }
 
         function updateKPIs() {
-            const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+            const total = expenses.reduce((sum, ex) => sum + ex.amount, 0);
+            document.getElementById('kpiTotal').innerText = `$${total.toFixed(2)}`;
 
             const now = new Date();
-            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            
-            const monthExpenses = expenses.filter(e => e.date.startsWith(currentYearMonth));
-            const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+            document.getElementById('kpiMonthName').innerText = monthName;
 
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            const daysPassed = (now.getFullYear() === new Date().getFullYear() && now.getMonth() === new Date().getMonth()) ? now.getDate() : daysInMonth;
-            const dailyAvg = daysPassed > 0 ? (monthTotal / daysPassed) : 0;
+            const monthExpenses = expenses.filter(ex => ex.date.startsWith(currentMonthStr));
+            const monthTotal = monthExpenses.reduce((sum, ex) => sum + ex.amount, 0);
+            document.getElementById('kpiMonth').innerText = `$${monthTotal.toFixed(2)}`;
 
-            const categoryMap = {};
-            monthExpenses.forEach(e => {
-                categoryMap[e.category] = (categoryMap[e.category] || 0) + e.amount;
+            const dayOfMonth = now.getDate();
+            const dailyAvg = dayOfMonth > 0 ? monthTotal / dayOfMonth : 0;
+            document.getElementById('kpiDailyAvg').innerText = `$${dailyAvg.toFixed(2)}`;
+
+            // Top Category
+            const catTotals = {};
+            monthExpenses.forEach(ex => {
+                catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount;
             });
-
-            let topCategoryName = 'None';
-            let topCategoryAmount = 0;
-            for (const [cat, amt] of Object.entries(categoryMap)) {
-                if (amt > topCategoryAmount) {
-                    topCategoryAmount = amt;
-                    topCategoryName = cat;
+            let topCat = 'None';
+            let topAmt = 0;
+            for (const [cat, amt] of Object.entries(catTotals)) {
+                if (amt > topAmt) {
+                    topAmt = amt;
+                    topCat = cat;
                 }
             }
-
-            document.getElementById('kpi-total').textContent = formatCurrency(total);
-            document.getElementById('kpi-month').textContent = formatCurrency(monthTotal);
-            document.getElementById('kpi-daily-avg').textContent = formatCurrency(dailyAvg);
-            document.getElementById('kpi-top-category').textContent = topCategoryName;
-            document.getElementById('kpi-top-category-amount').textContent = formatCurrency(topCategoryAmount);
-        }
-
-        function formatCurrency(amount) {
-            return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function initDateFilterDropdown() {
-            const select = document.getElementById('chart-month-select');
-            const currentVal = select.value;
-            
-            const monthsSet = new Set();
-            expenses.forEach(e => {
-                if (e.date && e.date.length >= 7) {
-                    monthsSet.add(e.date.slice(0, 7));
-                }
-            });
-
-            const now = new Date();
-            const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            monthsSet.add(currentYM);
-
-            const sortedMonths = Array.from(monthsSet).sort().reverse();
-
-            select.innerHTML = '';
-            sortedMonths.forEach(ym => {
-                const [y, m] = ym.split('-');
-                const dateObj = new Date(y, parseInt(m) - 1, 1);
-                const label = dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                
-                const option = document.createElement('option');
-                option.value = ym;
-                option.textContent = label;
-                select.appendChild(option);
-            });
-
-            if (currentVal && sortedMonths.includes(currentVal)) {
-                select.value = currentVal;
-            } else {
-                select.value = currentYM;
-            }
+            document.getElementById('kpiTopCategory').innerText = topCat;
+            document.getElementById('kpiTopCatAmount').innerText = `$${topAmt.toFixed(2)} spent`;
         }
 
         function updateCharts() {
-            const selectedYM = document.getElementById('chart-month-select').value || new Date().toISOString().slice(0, 7);
+            const selectedYM = document.getElementById('trendMonthSelect').value;
+            
+            // --- Trend Chart ---
             const [year, month] = selectedYM.split('-').map(Number);
             const daysInMonth = new Date(year, month, 0).getDate();
+            
+            const dailySums = {};
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayStr = `${selectedYM}-${String(i).padStart(2, '0')}`;
+                dailySums[dayStr] = 0;
+            }
 
-            const monthExpenses = expenses.filter(e => e.date.startsWith(selectedYM));
-
-            const dailyTotals = Array(daysInMonth).fill(0);
-            monthExpenses.forEach(e => {
-                const day = parseInt(e.date.split('-')[2], 10);
-                if (day >= 1 && day <= daysInMonth) {
-                    dailyTotals[day - 1] += e.amount;
+            expenses.filter(ex => ex.date.startsWith(selectedYM)).forEach(ex => {
+                if (dailySums[ex.date] !== undefined) {
+                    dailySums[ex.date] += ex.amount;
                 }
             });
 
-            const dayLabels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-            if (trendChartInstance) {
-                trendChartInstance.destroy();
-            }
+            const labels = Object.keys(dailySums).map(d => parseInt(d.split('-')[2]));
+            const data = Object.values(dailySums);
 
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+
             trendChartInstance = new Chart(ctxTrend, {
                 type: 'line',
                 data: {
-                    labels: dayLabels,
+                    labels: labels,
                     datasets: [{
-                        label: 'Daily Spend ($)',
-                        data: dailyTotals,
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                        borderWidth: 2.5,
+                        label: 'Daily Spending',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
                         fill: true,
-                        tension: 0.35,
-                        pointRadius: 2,
-                        pointBackgroundColor: '#6366f1'
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#3b82f6'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return ` Spend: $${context.parsed.y.toFixed(2)}`;
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { size: 10 }, color: '#64748b', maxTicksLimit: 10 }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10 }, color: '#64748b' }
-                        }
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }
                     }
                 }
             });
 
-            const categoryTotals = {};
-            Object.keys(categoryColors).forEach(cat => categoryTotals[cat] = 0);
-            
-            monthExpenses.forEach(e => {
-                if (categoryTotals[e.category] !== undefined) {
-                    categoryTotals[e.category] += e.amount;
-                } else {
-                    categoryTotals['Other'] = (categoryTotals['Other'] || 0) + e.amount;
-                }
+            // --- Category Doughnut Chart (Current Month) ---
+            const monthExpenses = expenses.filter(ex => ex.date.startsWith(selectedYM));
+            const catTotals = {};
+            monthExpenses.forEach(ex => {
+                catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount;
             });
 
-            const categories = Object.keys(categoryTotals).filter(cat => categoryTotals[cat] > 0);
-            const catValues = categories.map(cat => categoryTotals[cat]);
-            const catColors = categories.map(cat => categoryColors[cat]);
+            const catLabels = Object.keys(categoryMeta);
+            const catData = catLabels.map(cat => catTotals[cat] || 0);
+            const catColors = catLabels.map(cat => categoryMeta[cat].color);
 
-            if (categoryChartInstance) {
-                categoryChartInstance.destroy();
-            }
+            const ctxCat = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChartInstance) categoryChartInstance.destroy();
 
-            const ctxCategory = document.getElementById('categoryChart').getContext('2d');
-            
-            if (categories.length === 0) {
-                categoryChartInstance = new Chart(ctxCategory, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['No Data'],
-                        datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                        cutout: '75%'
-                    }
-                });
-                document.getElementById('category-legend').innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No expenses recorded for this month.</p>';
-                return;
-            }
-
-            categoryChartInstance = new Chart(ctxCategory, {
+            categoryChartInstance = new Chart(ctxCat, {
                 type: 'doughnut',
                 data: {
-                    labels: categories,
+                    labels: catLabels,
                     datasets: [{
-                        data: catValues,
+                        data: catData,
                         backgroundColor: catColors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderWidth: 0,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed;
-                                    const total = catValues.reduce((a, b) => a + b, 0);
-                                    const pct = ((value / total) * 100).toFixed(1);
-                                    return ` $${value.toFixed(2)} (${pct}%)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '72%'
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
                 }
             });
 
-            const totalCatSpend = catValues.reduce((a, b) => a + b, 0);
-            let legendHTML = '';
-            categories.forEach((cat, idx) => {
-                const val = catValues[idx];
-                const pct = totalCatSpend > 0 ? ((val / totalCatSpend) * 100).toFixed(0) : 0;
-                legendHTML += `
-                    <div class="flex items-center justify-between text-xs">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${catColors[idx]}"></span>
-                            <span class="font-medium text-slate-700">${cat}</span>
+            // Render Custom Legend
+            const totalMonthExp = catData.reduce((a, b) => a + b, 0);
+            const legendContainer = document.getElementById('categoryLegend');
+            legendContainer.innerHTML = '';
+            catLabels.forEach((cat, index) => {
+                const amt = catData[index];
+                if (amt > 0) {
+                    const pct = totalMonthExp > 0 ? ((amt / totalMonthExp) * 100).toFixed(1) : 0;
+                    legendContainer.innerHTML += `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2 truncate">
+                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${catColors[index]}"></span>
+                                <span class="text-slate-300 truncate">${cat}</span>
+                            </div>
+                            <div class="font-medium text-slate-200">$${amt.toFixed(2)} <span class="text-slate-500 text-[10px]">(${pct}%)</span></div>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-slate-500">$${val.toFixed(2)}</span>
-                            <span class="text-slate-400 font-semibold w-8 text-right">${pct}%</span>
-                        </div>
-                    </div>
-                `;
+                    `;
+                }
             });
-            document.getElementById('category-legend').innerHTML = legendHTML;
+            if (totalMonthExp === 0) {
+                legendContainer.innerHTML = `<p class="text-slate-500 text-center py-4">No expenses recorded for this month.</p>`;
+            }
         }
 
-        function filterTransactions() {
-            const searchQuery = document.getElementById('search-input').value.toLowerCase();
-            const catFilter = document.getElementById('filter-category').value;
-            const payFilter = document.getElementById('filter-payment').value;
+        function renderTransactions() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const catFilter = document.getElementById('filterCategory').value;
 
-            const filtered = expenses.filter(e => {
-                const matchesSearch = e.title.toLowerCase().includes(searchQuery);
-                const matchesCat = !catFilter || e.category === catFilter;
-                const matchesPay = !payFilter || e.paymentMethod === payFilter;
-                return matchesSearch && matchesCat && matchesPay;
-            });
+            const filtered = expenses.filter(ex => {
+                const matchTitle = ex.title.toLowerCase().includes(search);
+                const matchCat = catFilter ? ex.category === catFilter : true;
+                return matchTitle && matchCat;
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            const tbody = document.getElementById('transaction-table-body');
-            const mobileList = document.getElementById('transaction-mobile-list');
-            const emptyState = document.getElementById('empty-state');
+            const listContainer = document.getElementById('transactionList');
+            listContainer.innerHTML = '';
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '';
-                mobileList.innerHTML = '';
-                emptyState.classList.remove('hidden');
+                listContainer.innerHTML = `<div class="py-8 text-center text-slate-500 text-sm">No transactions found.</div>`;
                 return;
             }
 
-            emptyState.classList.add('hidden');
-
-            const categoryBadgeClasses = {
-                'Food': 'bg-amber-100 text-amber-800',
-                'Transport': 'bg-blue-100 text-blue-800',
-                'Utilities': 'bg-purple-100 text-purple-800',
-                'Entertainment': 'bg-pink-100 text-pink-800',
-                'Shopping': 'bg-emerald-100 text-emerald-800',
-                'Health': 'bg-cyan-100 text-cyan-800',
-                'Other': 'bg-slate-100 text-slate-800'
-            };
-
-            // Desktop Table Rows
-            tbody.innerHTML = filtered.map(e => {
-                const badgeClass = categoryBadgeClasses[e.category] || 'bg-slate-100 text-slate-800';
-                const formattedDate = new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
-                return `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                        <td class="py-3 px-6 text-xs font-medium text-slate-600 whitespace-nowrap">${formattedDate}</td>
-                        <td class="py-3 px-6 font-semibold text-slate-900">${escapeHtml(e.title)}</td>
-                        <td class="py-3 px-6 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">
-                                ${e.category}
-                            </span>
-                        </td>
-                        <td class="py-3 px-6 text-xs text-slate-500 whitespace-nowrap">
-                            <i class="fa-solid fa-wallet mr-1 text-slate-400"></i> ${e.paymentMethod}
-                        </td>
-                        <td class="py-3 px-6 text-right font-bold text-slate-900 whitespace-nowrap">
-                            $${e.amount.toFixed(2)}
-                        </td>
-                        <td class="py-3 px-6 text-center whitespace-nowrap">
-                            <div class="flex items-center justify-center space-x-2">
-                                <button onclick="openExpenseModal('${e.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition" title="Edit">
-                                    <i class="fa-solid fa-pen-to-square text-sm"></i>
-                                </button>
-                                <button onclick="deleteExpense('${e.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="Delete">
-                                    <i class="fa-solid fa-trash-can text-sm"></i>
-                                </button>
+            filtered.forEach(ex => {
+                const meta = categoryMeta[ex.category] || categoryMeta['Other'];
+                listContainer.innerHTML += `
+                    <div class="py-3 flex items-center justify-between hover:bg-slate-800/40 px-2 rounded-xl transition">
+                        <div class="flex items-center space-x-3 truncate">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: ${meta.color}20; color: ${meta.color}">
+                                <i class="fa-solid ${meta.icon}"></i>
                             </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Mobile Card List
-            mobileList.innerHTML = filtered.map(e => {
-                const badgeClass = categoryBadgeClasses[e.category] || 'bg-slate-100 text-slate-800';
-                const formattedDate = new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
-                return `
-                    <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-                        <div class="space-y-1 pr-2">
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs font-medium text-slate-500">${formattedDate}</span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}">
-                                    ${e.category}
-                                </span>
+                            <div class="truncate">
+                                <h4 class="font-medium text-sm text-slate-200 truncate">${ex.title}</h4>
+                                <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
+                                    <span>${ex.date}</span>
+                                    <span>•</span>
+                                    <span class="bg-slate-800 px-2 py-0.5 rounded-md text-[10px] text-slate-300">${ex.category}</span>
+                                    <span>•</span>
+                                    <span class="text-slate-500">${ex.paymentMethod}</span>
+                                </div>
                             </div>
-                            <h4 class="text-sm font-semibold text-slate-900">${escapeHtml(e.title)}</h4>
-                            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-wallet mr-1"></i>${e.paymentMethod}</p>
                         </div>
-                        <div class="text-right flex flex-col items-end space-y-2">
-                            <span class="text-base font-bold text-slate-900">$${e.amount.toFixed(2)}</span>
+                        <div class="flex items-center space-x-3 flex-shrink-0">
+                            <span class="font-bold text-sm text-rose-400">-$${ex.amount.toFixed(2)}</span>
                             <div class="flex items-center space-x-1">
-                                <button onclick="openExpenseModal('${e.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded">
-                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                <button onclick="openModal('${ex.id}')" class="p-1.5 text-slate-400 hover:text-blue-400 transition">
+                                    <i class="fa-solid fa-pen text-xs"></i>
                                 </button>
-                                <button onclick="deleteExpense('${e.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded">
-                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                <button onclick="deleteExpense('${ex.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 transition">
+                                    <i class="fa-solid fa-trash text-xs"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(expenses, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `expenses_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        expenses = imported;
+                        updateAll();
+                        alert('Data imported successfully!');
+                    } else {
+                        alert('Invalid backup file format.');
+                    }
+                } catch (err) {
+                    alert('Error parsing JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+
+    <!-- Service Worker Registration Script -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('Service Worker registered!', reg))
+                    .catch((err) => console.log('Service Worker registration failed:', err));
+            });
         }
     </script>
 </body>
