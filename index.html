@@ -92,17 +92,17 @@
         <div class="grid grid-cols-3 gap-2">
             <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                    <span>Total</span>
+                    <span>Today</span>
                     <div class="w-5 h-5 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
                         <i class="fa-solid fa-coins text-[10px]"></i>
                     </div>
                 </div>
-                <div id="kpiTotal" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
+                <div id="kpiToday" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
             </div>
 
             <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
                 <div class="flex items-center justify-between text-[10px] text-emerald-400 font-medium uppercase tracking-wider truncate">
-                    <span id="kpiMonthName" class="truncate">This Month</span>
+                    <span id="kpiMonthName" class="truncate">Month Range</span>
                     <div class="w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-calendar-days text-[10px]"></i>
                     </div>
@@ -190,18 +190,11 @@
 
     </main>
 
-    <!-- Mobile Bottom Navigation Bar Matching User Reference[span_0](start_span)[span_0](end_span) -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-30">
+    <!-- Mobile Bottom Navigation Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-center items-center z-30">
         <div class="flex flex-col items-center text-blue-500 text-[10px]">
             <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
             <span>Dashboard</span>
-        </div>
-        <button onclick="openModal()" class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md shadow-blue-500/40 -mt-5 border-2 border-slate-950">
-            <i class="fa-solid fa-plus text-sm"></i>
-        </button>
-        <div class="flex flex-col items-center text-slate-400 text-[10px]">
-            <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
-            <span>History</span>
         </div>
     </div>
 
@@ -297,6 +290,11 @@
         function getCurrentYearMonth() {
             const now = new Date();
             return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function getTodayDateString() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
 
         window.handleMonthChange = function(inputEl) {
@@ -446,17 +444,33 @@
         }
 
         function updateKPIs() {
-            const total = window.expenses.reduce((s, ex) => s + ex.amount, 0);
-            document.getElementById('kpiTotal').innerText = `$${total.toFixed(2)}`;
+            const todayStr = getTodayDateString();
+            const todayExp = window.expenses.filter(ex => ex.date === todayStr);
+            const todayTotal = todayExp.reduce((s, ex) => s + ex.amount, 0);
+            document.getElementById('kpiToday').innerText = `$${todayTotal.toFixed(2)}`;
 
-            const now = new Date();
-            const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            document.getElementById('kpiMonthName').innerText = now.toLocaleString('default', { month: 'short' });
+            let selectedYM = document.getElementById('trendMonthSelect').value;
+            if (!selectedYM) selectedYM = getCurrentYearMonth();
+            const [selYear, selMonth] = selectedYM.split('-').map(Number);
 
-            const monthExp = window.expenses.filter(ex => ex.date && ex.date.startsWith(ym));
+            document.getElementById('kpiMonthName').innerText = new Date(selYear, selMonth - 1, 1).toLocaleString('default', { month: 'short' });
+
+            const monthExp = window.expenses.filter(ex => ex.date && ex.date.startsWith(selectedYM));
             const monthTotal = monthExp.reduce((s, ex) => s + ex.amount, 0);
             document.getElementById('kpiMonth').innerText = `$${monthTotal.toFixed(2)}`;
-            document.getElementById('kpiDailyAvg').innerText = `$${(now.getDate() > 0 ? monthTotal / now.getDate() : 0).toFixed(2)}`;
+
+            const now = new Date();
+            let elapsedDays = 0;
+            if (selYear === now.getFullYear() && selMonth === (now.getMonth() + 1)) {
+                elapsedDays = now.getDate();
+            } else if (selYear < now.getFullYear() || (selYear === now.getFullYear() && selMonth < (now.getMonth() + 1))) {
+                elapsedDays = new Date(selYear, selMonth, 0).getDate();
+            } else {
+                elapsedDays = 0;
+            }
+
+            const dailyAvg = elapsedDays > 0 ? monthTotal / elapsedDays : 0;
+            document.getElementById('kpiDailyAvg').innerText = `$${dailyAvg.toFixed(2)}`;
 
             const pct = window.monthlyBudget > 0 ? Math.min(Math.round((monthTotal / window.monthlyBudget) * 100), 100) : 0;
             document.getElementById('gaugePercentage').innerText = `${pct}%`;
@@ -484,17 +498,24 @@
 
             const viewMode = document.getElementById('trendViewMode').value;
             const [year, month] = selectedYM.split('-').map(Number);
+            const now = new Date();
+            const todayStr = getTodayDateString();
 
             const filteredExp = window.expenses.filter(ex => {
                 if (!ex.date) return false;
+                if (ex.date > todayStr) return false; // Exclude future days
                 return ex.date.startsWith(selectedYM) && (!selectedCategoryFilter || ex.category === selectedCategoryFilter);
             });
 
             let labels = [], data = [];
             if (viewMode === 'daily') {
-                const days = new Date(year, month, 0).getDate();
+                const daysInMonth = new Date(year, month, 0).getDate();
+                const lastDayToInclude = (year === now.getFullYear() && month === (now.getMonth() + 1)) ? now.getDate() : daysInMonth;
+                
                 const sums = {};
-                for (let i = 1; i <= days; i++) sums[`${selectedYM}-${String(i).padStart(2, '0')}`] = 0;
+                for (let i = 1; i <= lastDayToInclude; i++) {
+                    sums[`${selectedYM}-${String(i).padStart(2, '0')}`] = 0;
+                }
                 filteredExp.forEach(ex => { if (sums[ex.date] !== undefined) sums[ex.date] += ex.amount; });
                 labels = Object.keys(sums).map(d => parseInt(d.split('-')[2]));
                 data = Object.values(sums);
@@ -571,7 +592,6 @@
             catLabels.forEach((cat, i) => {
                 const amt = catData[i];
                 if (amt > 0 || !selectedCategoryFilter) {
-                    const pct = totalM > 0 ? ((amt / totalM) * 100).toFixed(0) : 0;
                     const isSel = selectedCategoryFilter === cat;
                     legend.innerHTML += `
                         <div onclick="filterByCategory('${isSel ? '' : cat}')" class="flex items-center justify-between p-1 rounded-lg cursor-pointer transition ${isSel ? 'bg-blue-500/20 border border-blue-500/40' : 'hover:bg-slate-800/40'}">
