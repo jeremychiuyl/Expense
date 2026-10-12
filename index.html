@@ -162,10 +162,10 @@
         <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-3.5">
             <h2 class="font-semibold text-xs text-slate-200 mb-2">Categories <span class="text-[10px] text-slate-400 font-normal">(Tap to filter)</span></h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-                <div class="relative h-40 flex justify-center items-center">
+                <div class="relative h-36 flex justify-center items-center">
                     <canvas id="categoryChart"></canvas>
                 </div>
-                <div id="categoryLegend" class="md:col-span-2 space-y-1.5 overflow-y-auto max-h-40 pr-1 text-xs"></div>
+                <div id="categoryLegend" class="md:col-span-2 grid grid-cols-2 gap-1.5 text-xs"></div>
             </div>
         </div>
 
@@ -178,7 +178,6 @@
                         <option value="">All</option>
                         <option value="Food">Food</option>
                         <option value="Transport">Transport</option>
-                        <option value="Utilities">Utilities</option>
                         <option value="Entertainment">Entertainment</option>
                         <option value="Shopping">Shopping</option>
                         <option value="Health">Health</option>
@@ -191,11 +190,19 @@
 
     </main>
 
-    <!-- Mobile Bottom Navigation Bar -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-center items-center z-30">
-        <button onclick="openModal()" class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-2 border-slate-950">
-            <i class="fa-solid fa-plus text-base"></i>
+    <!-- Mobile Bottom Navigation Bar Matching User Reference[span_0](start_span)[span_0](end_span) -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-30">
+        <div class="flex flex-col items-center text-blue-500 text-[10px]">
+            <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+            <span>Dashboard</span>
+        </div>
+        <button onclick="openModal()" class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md shadow-blue-500/40 -mt-5 border-2 border-slate-950">
+            <i class="fa-solid fa-plus text-sm"></i>
         </button>
+        <div class="flex flex-col items-center text-slate-400 text-[10px]">
+            <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
+            <span>History</span>
+        </div>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -227,7 +234,6 @@
                         <select id="category" class="w-full h-10 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
                             <option value="Food">Food</option>
                             <option value="Transport">Transport</option>
-                            <option value="Utilities">Utilities</option>
                             <option value="Entertainment">Entertainment</option>
                             <option value="Shopping">Shopping</option>
                             <option value="Health">Health</option>
@@ -258,7 +264,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Explicitly register the zoom plugin with Chart.js
         Chart.register(window.ChartZoom);
 
         const firebaseConfig = {
@@ -283,7 +288,6 @@
         const categoryMeta = {
             'Food': { icon: 'fa-utensils', color: '#3b82f6' },
             'Transport': { icon: 'fa-car', color: '#10b981' },
-            'Utilities': { icon: 'fa-bolt', color: '#f59e0b' },
             'Entertainment': { icon: 'fa-gamepad', color: '#ec4899' },
             'Shopping': { icon: 'fa-bag-shopping', color: '#8b5cf6' },
             'Health': { icon: 'fa-heart-pulse', color: '#ef4444' },
@@ -570,18 +574,15 @@
                     const pct = totalM > 0 ? ((amt / totalM) * 100).toFixed(0) : 0;
                     const isSel = selectedCategoryFilter === cat;
                     legend.innerHTML += `
-                        <div onclick="filterByCategory('${isSel ? '' : cat}')" class="flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition ${isSel ? 'bg-blue-500/20 border border-blue-500/40' : 'hover:bg-slate-800/40'}">
-                            <div class="flex items-center space-x-2 truncate">
-                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${catColors[i]}"></span>
-                                <span class="text-slate-200 text-xs truncate">${cat}</span>
+                        <div onclick="filterByCategory('${isSel ? '' : cat}')" class="flex items-center justify-between p-1 rounded-lg cursor-pointer transition ${isSel ? 'bg-blue-500/20 border border-blue-500/40' : 'hover:bg-slate-800/40'}">
+                            <div class="flex items-center space-x-1.5 truncate">
+                                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ${catColors[i]}"></span>
+                                <span class="text-slate-200 text-[11px] truncate">${cat}</span>
                             </div>
-                            <div class="font-semibold text-slate-100 text-xs">$${amt.toFixed(2)} <span class="text-slate-400 text-[10px]">(${pct}%)</span></div>
+                            <div class="font-semibold text-slate-100 text-[11px]">$${amt.toFixed(0)}</div>
                         </div>`;
                 }
             });
-            if (selectedCategoryFilter) {
-                legend.innerHTML += `<button onclick="clearCategoryFilter()" class="w-full mt-1 py-1 text-center text-[10px] text-blue-400 bg-blue-500/10 rounded-lg">Reset Filter</button>`;
-            }
         }
 
         function renderTransactions() {
