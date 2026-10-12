@@ -6,11 +6,12 @@
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
- "icons": [
-  {
-    "src": "./icon.png.jpg",
-    "sizes": "512x512",
-    "type": "image/png"
-  }
-]
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
