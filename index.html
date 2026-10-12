@@ -24,6 +24,14 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+
+        /* Fix iOS Safari native date picker styling & alignment */
+        input[type="date"], input[type="month"] {
+            min-height: 2.25rem;
+            -webkit-appearance: none;
+            appearance: none;
+            color-scheme: dark;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col pb-20 md:pb-6">
@@ -59,18 +67,38 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-3 py-3 w-full flex-grow space-y-3">
 
-        <!-- Compact KPI Summary Bar -->
+        <!-- Enhanced Top 3 KPI Summary Cards with Icons -->
         <div class="grid grid-cols-3 gap-2">
-            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-3">
-                <div class="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Total</div>
+            <!-- Total Card -->
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                    <span>Total</span>
+                    <div class="w-5 h-5 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                        <i class="fa-solid fa-coins text-[10px]"></i>
+                    </div>
+                </div>
                 <div id="kpiTotal" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
             </div>
-            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-3">
-                <div id="kpiMonthName" class="text-[10px] text-emerald-400 uppercase tracking-wider font-medium truncate">This Month</div>
+
+            <!-- This Month Card -->
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
+                <div class="flex items-center justify-between text-[10px] text-emerald-400 font-medium uppercase tracking-wider truncate">
+                    <span id="kpiMonthName" class="truncate">This Month</span>
+                    <div class="w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-calendar-days text-[10px]"></i>
+                    </div>
+                </div>
                 <div id="kpiMonth" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
             </div>
-            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-3">
-                <div class="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Daily Avg</div>
+
+            <!-- Daily Avg Card -->
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                    <span>Daily Avg</span>
+                    <div class="w-5 h-5 rounded-md bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line text-[10px]"></i>
+                    </div>
+                </div>
                 <div id="kpiDailyAvg" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
             </div>
         </div>
@@ -86,7 +114,8 @@
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                         </select>
-                        <input type="month" id="trendMonthSelect" class="bg-slate-800 border border-slate-700 text-[10px] rounded-lg px-2 py-1 text-slate-300 focus:outline-none" onchange="updateCharts()">
+                        <!-- Month Picker with auto-fallback script -->
+                        <input type="month" id="trendMonthSelect" class="bg-slate-800 border border-slate-700 text-[10px] rounded-lg px-2 py-1 text-slate-200 focus:outline-none" onchange="handleMonthChange(this)">
                     </div>
                 </div>
                 <div class="relative h-48 sm:h-52 w-full">
@@ -166,7 +195,7 @@
         </button>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Add/Edit Modal (Fixed input alignment & sizing) -->
     <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-4 shadow-2xl">
             <div class="flex justify-between items-center mb-3">
@@ -177,22 +206,22 @@
                 <input type="hidden" id="expenseId">
                 <div>
                     <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Title</label>
-                    <input type="text" id="title" required placeholder="e.g., Lunch" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+                    <input type="text" id="title" required placeholder="e.g., Lunch" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-3 text-slate-200 focus:outline-none">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Amount ($)</label>
-                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-3 text-slate-200 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Date</label>
-                        <input type="date" id="date" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+                        <input type="date" id="date" required class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Category</label>
-                        <select id="category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+                        <select id="category" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
                             <option value="Food">Food</option>
                             <option value="Transport">Transport</option>
                             <option value="Utilities">Utilities</option>
@@ -204,7 +233,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Method</label>
-                        <select id="paymentMethod" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+                        <select id="paymentMethod" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
                             <option value="Credit Card">Credit Card</option>
                             <option value="Debit Card">Debit Card</option>
                             <option value="Cash">Cash</option>
@@ -255,9 +284,20 @@
             'Other': { icon: 'fa-box-archive', color: '#64748b' }
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
+        function getCurrentYearMonth() {
             const now = new Date();
-            document.getElementById('trendMonthSelect').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        window.handleMonthChange = function(inputEl) {
+            if (!inputEl.value) {
+                inputEl.value = getCurrentYearMonth();
+            }
+            updateCharts();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('trendMonthSelect').value = getCurrentYearMonth();
             document.getElementById('date').valueAsDate = new Date();
 
             onValue(ref(db, 'expenses'), (snapshot) => {
@@ -290,8 +330,6 @@
         window.scrollToHistory = function() {
             document.getElementById('transactionsSection').scrollIntoView({ behavior: 'smooth' });
         }
-
-        window.toggleMenu = function() {}
 
         window.openModal = function(id = null) {
             document.getElementById('expenseModal').classList.remove('hidden');
@@ -398,7 +436,12 @@
         }
 
         function updateCharts() {
-            const selectedYM = document.getElementById('trendMonthSelect').value;
+            let selectedYM = document.getElementById('trendMonthSelect').value;
+            if (!selectedYM) {
+                selectedYM = getCurrentYearMonth();
+                document.getElementById('trendMonthSelect').value = selectedYM;
+            }
+
             const viewMode = document.getElementById('trendViewMode').value;
             const [year, month] = selectedYM.split('-').map(Number);
 
