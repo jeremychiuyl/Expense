@@ -17,7 +17,6 @@
     
     <!-- Chart.js & Chart.js Zoom Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammerjs/2.0.8/hammer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
     
     <!-- FontAwesome for Icons -->
@@ -28,11 +27,9 @@
         
         body { 
             font-family: 'Inter', sans-serif; 
-            /* Disable text highlighting globally */
             -webkit-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            /* Prevent elastic bounce scroll at the very top */
             overscroll-behavior-y: contain;
         }
 
@@ -260,6 +257,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Explicitly register the zoom plugin with Chart.js
+        Chart.register(window.ChartZoom);
 
         const firebaseConfig = {
             apiKey: "AIzaSyAUeMO4fqkKGUUu8rWW_WaFRElJxOBBJoE",
@@ -588,7 +588,6 @@
             const search = document.getElementById('searchInput').value.toLowerCase();
             const catF = selectedCategoryFilter || document.getElementById('filterCategory').value;
             
-            // Descending order of date (newest first)
             const filtered = window.expenses.filter(ex => ex.title && ex.date && ex.title.toLowerCase().includes(search) && (!catF || ex.category === catF)).sort((a, b) => new Date(b.date) - new Date(a.date));
 
             const list = document.getElementById('transactionList');
