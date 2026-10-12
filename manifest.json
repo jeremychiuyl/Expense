@@ -1,6 +1,6 @@
 {
   "name": "Daily Expense Tracker",
-  "short_name": "Expenses",
+  "short_name": "Where do I spend my money?",
   "description": "Track your daily expenses and view interactive dashboards.",
   "start_url": "./index.html",
   "display": "standalone",
