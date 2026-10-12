@@ -177,4 +177,394 @@
                         <option value="Other">Other</option>
                     </select>
                 </div>
+            </div>
+            <div id="transactionList" class="divide-y divide-slate-800/50 max-h-56 overflow-y-auto pr-1 text-xs">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-30">
+        <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="flex flex-col items-center text-blue-500 text-[10px]">
+            <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+            <span>Dashboard</span>
+        </button>
+        <button onclick="openModal()" class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md shadow-blue-500/40 -mt-5 border-2 border-slate-950">
+            <i class="fa-solid fa-plus text-sm"></i>
+        </button>
+        <button onclick="scrollToHistory()" class="flex flex-col items-center text-slate-400 text-[10px] hover:text-slate-200">
+            <i class="fa-solid fa-list-ul text-base mb-0.5"></i>
+            <span>History</span>
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-3">
+                <h3 id="modalTitle" class="font-bold text-sm text-slate-100">Add Expense</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="expenseForm" onsubmit="saveExpense(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="expenseId">
+                <div>
+                    <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Title</label>
+                    <input type="text" id="title" required placeholder="e.g., Lunch" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-3 text-slate-200 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Amount ($)</label>
+                        <input type="number" step="0.01" id="amount" required placeholder="0.00" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-3 text-slate-200 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Date</label>
+                        <input type="date" id="date" required class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Category</label>
+                        <select id="category" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Health">Health</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-400 mb-0.5">Method</label>
+                        <select id="paymentMethod" class="w-full h-9 bg-slate-800 border border-slate-700 rounded-lg px-2 text-slate-200 focus:outline-none">
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Debit Card">Debit Card</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Mobile Wallet">Mobile Wallet</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="px-3 py-2 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Integration & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove, update, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUeMO4fqkKGUUu8rWW_WaFRElJxOBBJoE",
+            authDomain: "expense-looker.firebaseapp.com",
+            databaseURL: "https://expense-looker-default-rtdb.firebaseio.com",
+            projectId: "expense-looker",
+            storageBucket: "expense-looker.firebasestorage.app",
+            messagingSenderId: "303121746419",
+            appId: "1:303121746419:web:1c9f038a65f21a7c3c2a86",
+            measurementId: "G-H5JTCLSX1F"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.expenses = [];
+        window.monthlyBudget = 500.00;
+        let selectedCategoryFilter = null;
+        let trendChartInstance = null, categoryChartInstance = null, gaugeChartInstance = null;
+
+        const categoryMeta = {
+            'Food': { icon: 'fa-utensils', color: '#3b82f6' },
+            'Transport': { icon: 'fa-car', color: '#10b981' },
+            'Utilities': { icon: 'fa-bolt', color: '#f59e0b' },
+            'Entertainment': { icon: 'fa-gamepad', color: '#ec4899' },
+            'Shopping': { icon: 'fa-bag-shopping', color: '#8b5cf6' },
+            'Health': { icon: 'fa-heart-pulse', color: '#ef4444' },
+            'Other': { icon: 'fa-box-archive', color: '#64748b' }
+        };
+
+        function getCurrentYearMonth() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        window.handleMonthChange = function(inputEl) {
+            if (!inputEl.value) {
+                inputEl.value = getCurrentYearMonth();
+            }
+            updateCharts();
+        };
+
+        window.manualRefresh = function() {
+            const btnIcon = document.querySelector('#refreshBtn i');
+            btnIcon.classList.add('fa-spin');
             
+            get(ref(db, 'expenses')).then((snapshot) => {
+                const data = snapshot.val();
+                window.expenses = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [];
+                updateSyncStatus(true);
+                updateAll();
+                setTimeout(() => btnIcon.classList.remove('fa-spin'), 600);
+            }).catch(() => {
+                updateSyncStatus(false);
+                btnIcon.classList.remove('fa-spin');
+            });
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('trendMonthSelect').value = getCurrentYearMonth();
+            document.getElementById('date').valueAsDate = new Date();
+
+            onValue(ref(db, 'expenses'), (snapshot) => {
+                const data = snapshot.val();
+                window.expenses = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [];
+                updateSyncStatus(true);
+                updateAll();
+            }, () => updateSyncStatus(false));
+
+            onValue(ref(db, 'budget'), (snapshot) => {
+                const val = snapshot.val();
+                window.monthlyBudget = val !== null ? parseFloat(val) : 500.00;
+                document.getElementById('budgetLimitText').innerText = `$${window.monthlyBudget.toFixed(2)}`;
+                updateAll();
+            });
+        });
+
+        function updateSyncStatus(isLive) {
+            document.getElementById('syncStatus').className = `w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-500' : 'bg-rose-500'} inline-block`;
+            document.getElementById('syncText').innerText = isLive ? 'Synced' : 'Error';
+        }
+
+        window.updateAll = function() {
+            updateKPIs();
+            updateCharts();
+            renderTransactions();
+            updateFilterBadgeUI();
+        }
+
+        window.scrollToHistory = function() {
+            document.getElementById('transactionsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.openModal = function(id = null) {
+            document.getElementById('expenseModal').classList.remove('hidden');
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Expense';
+                const item = window.expenses.find(ex => ex.id === id);
+                if (item) {
+                    document.getElementById('expenseId').value = item.id;
+                    document.getElementById('title').value = item.title;
+                    document.getElementById('amount').value = item.amount;
+                    document.getElementById('date').value = item.date;
+                    document.getElementById('category').value = item.category;
+                    document.getElementById('paymentMethod').value = item.paymentMethod;
+                }
+            } else {
+                document.getElementById('modalTitle').innerText = 'Add Expense';
+                document.getElementById('expenseForm').reset();
+                document.getElementById('expenseId').value = '';
+                document.getElementById('date').valueAsDate = new Date();
+            }
+        }
+
+        window.closeModal = function() { document.getElementById('expenseModal').classList.add('hidden'); }
+
+        window.saveExpense = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('expenseId').value;
+            const data = {
+                title: document.getElementById('title').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                date: document.getElementById('date').value,
+                category: document.getElementById('category').value,
+                paymentMethod: document.getElementById('paymentMethod').value
+            };
+            if (id) update(ref(db, `expenses/${id}`), data);
+            else set(push(ref(db, 'expenses')), data);
+            closeModal();
+        }
+
+        window.deleteExpense = function(id) {
+            if (confirm('Delete expense?')) remove(ref(db, `expenses/${id}`));
+        }
+
+        window.promptBudgetThreshold = function() {
+            const input = prompt("Set monthly budget ($):", window.monthlyBudget);
+            if (input !== null && !isNaN(input) && Number(input) > 0) set(ref(db, 'budget'), parseFloat(input));
+        }
+
+        window.filterByCategory = function(cat) {
+            selectedCategoryFilter = cat;
+            document.getElementById('filterCategory').value = cat || "";
+            updateAll();
+        }
+
+        window.onCategorySelectFilter = function(val) {
+            selectedCategoryFilter = val || null;
+            updateAll();
+        }
+
+        window.clearCategoryFilter = function() {
+            selectedCategoryFilter = null;
+            document.getElementById('filterCategory').value = "";
+            updateAll();
+        }
+
+        function updateFilterBadgeUI() {
+            const badge = document.getElementById('activeFilterBadge');
+            if (selectedCategoryFilter) {
+                badge.classList.remove('hidden'); badge.classList.add('flex');
+                document.getElementById('filterBadgeText').innerText = selectedCategoryFilter;
+            } else {
+                badge.classList.add('hidden'); badge.classList.remove('flex');
+            }
+        }
+
+        function updateKPIs() {
+            const total = window.expenses.reduce((s, ex) => s + ex.amount, 0);
+            document.getElementById('kpiTotal').innerText = `$${total.toFixed(2)}`;
+
+            const now = new Date();
+            const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('kpiMonthName').innerText = now.toLocaleString('default', { month: 'short' });
+
+            const monthExp = window.expenses.filter(ex => ex.date && ex.date.startsWith(ym));
+            const monthTotal = monthExp.reduce((s, ex) => s + ex.amount, 0);
+            document.getElementById('kpiMonth').innerText = `$${monthTotal.toFixed(2)}`;
+            document.getElementById('kpiDailyAvg').innerText = `$${(now.getDate() > 0 ? monthTotal / now.getDate() : 0).toFixed(2)}`;
+
+            const pct = window.monthlyBudget > 0 ? Math.min(Math.round((monthTotal / window.monthlyBudget) * 100), 100) : 0;
+            document.getElementById('gaugePercentage').innerText = `${pct}%`;
+
+            if (gaugeChartInstance) gaugeChartInstance.destroy();
+            gaugeChartInstance = new Chart(document.getElementById('gaugeChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [Math.min(monthTotal, window.monthlyBudget), Math.max(window.monthlyBudget - monthTotal, 0)],
+                        backgroundColor: [monthTotal > window.monthlyBudget ? '#ef4444' : '#3b82f6', '#1e293b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: 270, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '75%' }
+            });
+        }
+
+        function updateCharts() {
+            let selectedYM = document.getElementById('trendMonthSelect').value;
+            if (!selectedYM) {
+                selectedYM = getCurrentYearMonth();
+                document.getElementById('trendMonthSelect').value = selectedYM;
+            }
+
+            const viewMode = document.getElementById('trendViewMode').value;
+            const [year, month] = selectedYM.split('-').map(Number);
+
+            const filteredExp = window.expenses.filter(ex => {
+                if (!ex.date) return false;
+                return ex.date.startsWith(selectedYM) && (!selectedCategoryFilter || ex.category === selectedCategoryFilter);
+            });
+
+            let labels = [], data = [];
+            if (viewMode === 'daily') {
+                const days = new Date(year, month, 0).getDate();
+                const sums = {};
+                for (let i = 1; i <= days; i++) sums[`${selectedYM}-${String(i).padStart(2, '0')}`] = 0;
+                filteredExp.forEach(ex => { if (sums[ex.date] !== undefined) sums[ex.date] += ex.amount; });
+                labels = Object.keys(sums).map(d => parseInt(d.split('-')[2]));
+                data = Object.values(sums);
+            } else {
+                const weeks = { 'W1': 0, 'W2': 0, 'W3': 0, 'W4': 0, 'W5': 0 };
+                filteredExp.forEach(ex => {
+                    const d = parseInt(ex.date.split('-')[2]);
+                    if (d <= 7) weeks['W1'] += ex.amount;
+                    else if (d <= 14) weeks['W2'] += ex.amount;
+                    else if (d <= 21) weeks['W3'] += ex.amount;
+                    else if (d <= 28) weeks['W4'] += ex.amount;
+                    else weeks['W5'] += ex.amount;
+                });
+                labels = Object.keys(weeks); data = Object.values(weeks);
+            }
+
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(document.getElementById('trendChart').getContext('2d'), {
+                type: 'line',
+                data: { labels, datasets: [{ data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } }, y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } } } }
+            });
+
+            const rawMonth = window.expenses.filter(ex => ex.date && ex.date.startsWith(selectedYM));
+            const catTotals = {};
+            rawMonth.forEach(ex => { catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount; });
+
+            const catLabels = Object.keys(categoryMeta);
+            const catData = catLabels.map(cat => catTotals[cat] || 0);
+            const catColors = catLabels.map(cat => categoryMeta[cat].color);
+
+            if (categoryChartInstance) categoryChartInstance.destroy();
+            categoryChartInstance = new Chart(document.getElementById('categoryChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: catColors, borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%', onClick: (e, els) => { if (els.length) filterByCategory(selectedCategoryFilter === catLabels[els[0].index] ? null : catLabels[els[0].index]); } }
+            });
+
+            const totalM = catData.reduce((a, b) => a + b, 0);
+            const legend = document.getElementById('categoryLegend');
+            legend.innerHTML = '';
+            catLabels.forEach((cat, i) => {
+                const amt = catData[i];
+                if (amt > 0 || !selectedCategoryFilter) {
+                    const pct = totalM > 0 ? ((amt / totalM) * 100).toFixed(0) : 0;
+                    const isSel = selectedCategoryFilter === cat;
+                    legend.innerHTML += `
+                        <div onclick="filterByCategory('${isSel ? '' : cat}')" class="flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition ${isSel ? 'bg-blue-500/20 border border-blue-500/40' : 'hover:bg-slate-800/40'}">
+                            <div class="flex items-center space-x-2 truncate">
+                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${catColors[i]}"></span>
+                                <span class="text-slate-200 text-xs truncate">${cat}</span>
+                            </div>
+                            <div class="font-semibold text-slate-100 text-xs">$${amt.toFixed(2)} <span class="text-slate-400 text-[10px]">(${pct}%)</span></div>
+                        </div>`;
+                }
+            });
+            if (selectedCategoryFilter) {
+                legend.innerHTML += `<button onclick="clearCategoryFilter()" class="w-full mt-1 py-1 text-center text-[10px] text-blue-400 bg-blue-500/10 rounded-lg">Reset Filter</button>`;
+            }
+        }
+
+        function renderTransactions() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const catF = selectedCategoryFilter || document.getElementById('filterCategory').value;
+            const filtered = window.expenses.filter(ex => ex.title && ex.date && ex.title.toLowerCase().includes(search) && (!catF || ex.category === catF)).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const list = document.getElementById('transactionList');
+            list.innerHTML = filtered.length === 0 ? `<div class="py-4 text-center text-slate-500 text-xs">No records</div>` : '';
+            filtered.forEach(ex => {
+                const m = categoryMeta[ex.category] || categoryMeta['Other'];
+                list.innerHTML += `
+                    <div class="py-2 flex items-center justify-between hover:bg-slate-800/30 px-1.5 rounded-lg">
+                        <div class="flex items-center space-x-2.5 truncate">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs" style="background-color: ${m.color}20; color: ${m.color}">
+                                <i class="fa-solid ${m.icon}"></i>
+                            </div>
+                            <div class="truncate">
+                                <h4 class="font-medium text-xs text-slate-200 truncate">${ex.title}</h4>
+                                <div class="text-[10px] text-slate-400">${ex.date} • ${ex.category}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 flex-shrink-0">
+                            <span class="font-bold text-xs text-rose-400">-$${ex.amount.toFixed(2)}</span>
+                            <button onclick="openModal('${ex.id}')" class="text-slate-500 hover:text-blue-400 p-1"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                            <button onclick="deleteExpense('${ex.id}')" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                        </div>
+                    </div>`;
+            });
+        }
+    </script>
+</body>
+</html>
