@@ -41,6 +41,10 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
+                <div id="activeFilterBadge" class="hidden items-center space-x-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs px-2.5 py-1.5 rounded-xl">
+                    <span id="filterBadgeText">Filter: None</span>
+                    <button onclick="clearCategoryFilter()" class="hover:text-white ml-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
                 <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-sm font-medium shadow-md shadow-blue-600/30 transition flex items-center space-x-2">
                     <i class="fa-solid fa-plus"></i>
                     <span class="hidden sm:inline">Add Expense</span>
@@ -66,8 +70,8 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow space-y-6">
 
-        <!-- KPI Summary Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- KPI Summary Cards (3 Cards now) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
                     <span>Total Expenses</span>
@@ -92,43 +96,65 @@
                 <div id="kpiDailyAvg" class="text-2xl font-bold mt-2 text-slate-100">$0.00</div>
                 <div class="text-xs text-slate-500 mt-1">This month avg</div>
             </div>
-            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-sm">
-                <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider">
-                    <span>Top Category</span>
-                    <i class="fa-solid fa-tag text-purple-400"></i>
-                </div>
-                <div id="kpiTopCategory" class="text-xl font-bold mt-2 text-slate-100 truncate">None</div>
-                <div id="kpiTopCatAmount" class="text-xs text-purple-400 mt-1">$0.00 spent</div>
-            </div>
         </div>
 
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Daily Spending Trend Line Chart -->
+            <!-- Spending Trend Line Chart -->
             <div class="lg:col-span-2 bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
                     <h2 class="font-semibold text-base text-slate-200">Spending Trend</h2>
-                    <input type="month" id="trendMonthSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500" onchange="updateCharts()">
+                    <div class="flex items-center space-x-2">
+                        <select id="trendViewMode" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500" onchange="updateCharts()">
+                            <option value="daily">Daily View</option>
+                            <option value="weekly">Weekly View</option>
+                        </select>
+                        <input type="month" id="trendMonthSelect" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-300 focus:outline-none focus:border-blue-500" onchange="updateCharts()">
+                    </div>
                 </div>
                 <div class="relative flex-grow h-64 md:h-72">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
 
-            <!-- Category Doughnut Chart -->
-            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col">
-                <h2 class="font-semibold text-base text-slate-200 mb-4">Category Breakdown</h2>
-                <div class="relative h-48 flex justify-center items-center">
+            <!-- Gauge Chart / Budget Threshold -->
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between cursor-pointer group" onclick="promptBudgetThreshold()" title="Click to set monthly budget threshold">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="font-semibold text-base text-slate-200">Monthly Budget Gauge</h2>
+                    <i class="fa-solid fa-gear text-slate-500 group-hover:text-blue-400 transition text-xs"></i>
+                </div>
+                <div class="relative h-44 flex justify-center items-center my-auto">
+                    <canvas id="gaugeChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
+                        <span id="gaugePercentage" class="text-2xl font-bold text-slate-100">0%</span>
+                        <span class="text-[10px] text-slate-400">of budget used</span>
+                    </div>
+                </div>
+                <div class="text-center text-xs text-slate-400 mt-2 bg-slate-800/50 py-1.5 rounded-xl border border-slate-800">
+                    Budget Limit: <span id="budgetLimitText" class="font-semibold text-slate-200">$500.00</span> <span class="text-[10px] text-blue-400 ml-1">(Click to edit)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Breakdown Section -->
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold text-base text-slate-200">Category Breakdown <span class="text-xs text-slate-400 font-normal">(Click category to filter)</span></h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div class="relative h-56 flex justify-center items-center">
                     <canvas id="categoryChart"></canvas>
                 </div>
-                <div id="categoryLegend" class="mt-4 space-y-2 overflow-y-auto max-h-36 pr-1 text-xs"></div>
+                <div id="categoryLegend" class="md:col-span-2 space-y-2.5 overflow-y-auto max-h-56 pr-2 text-xs">
+                    <!-- Populated dynamically -->
+                </div>
             </div>
         </div>
 
         <!-- Transactions Section -->
-        <div class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
+        <div id="transactionsSection" class="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-5">
-                <h2 class="font-semibold text-base text-slate-200">Recent Transactions</h2>
+                <h2 class="font-semibold text-base text-slate-200">Transactions History</h2>
                 
                 <!-- Search & Filters -->
                 <div class="flex flex-wrap items-center gap-2">
@@ -136,7 +162,7 @@
                         <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
                         <input type="text" id="searchInput" placeholder="Search title..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl pl-8 pr-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500 w-full md:w-48" oninput="renderTransactions()">
                     </div>
-                    <select id="filterCategory" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500" onchange="renderTransactions()">
+                    <select id="filterCategory" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500" onchange="onCategorySelectFilter(this.value)">
                         <option value="">All Categories</option>
                         <option value="Food">Food & Dining</option>
                         <option value="Transport">Transport</option>
@@ -166,7 +192,7 @@
         <button onclick="openModal()" class="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 -mt-6 border-4 border-slate-950">
             <i class="fa-solid fa-plus text-lg"></i>
         </button>
-        <button onclick="scrollToTransactions()" class="flex flex-col items-center text-slate-400 text-xs hover:text-slate-200">
+        <button onclick="scrollToHistory()" class="flex flex-col items-center text-slate-400 text-xs hover:text-slate-200">
             <i class="fa-solid fa-list-ul text-lg mb-0.5"></i>
             <span>History</span>
         </button>
@@ -174,7 +200,7 @@
 
     <!-- Add/Edit Modal -->
     <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modalTitle" class="font-bold text-lg text-slate-100">Add New Expense</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1">
@@ -232,7 +258,6 @@
 
     <!-- Application Script -->
     <script>
-        // Category Icons & Colors mapping
         const categoryMeta = {
             'Food': { icon: 'fa-utensils', color: '#3b82f6' },
             'Transport': { icon: 'fa-car', color: '#10b981' },
@@ -245,39 +270,44 @@
 
         let expenses = JSON.parse(localStorage.getItem('expenses')) || [
             { id: '1', title: 'Morning Coffee', amount: 4.50, date: new Date().toISOString().split('T')[0], category: 'Food', paymentMethod: 'Mobile Wallet' },
-            { id: '2', title: 'Groceries at Supermarket', amount: 65.20, date: new Date(Date.now()-86400000).toISOString().split('T')[0], category: 'Food', paymentMethod: 'Credit Card' },
-            { id: '3', title: 'Subway Monthly Pass', amount: 85.00, date: new Date(Date.now()-172800000).toISOString().split('T')[0], category: 'Transport', paymentMethod: 'Credit Card' }
+            { id: '2', title: 'Groceries', amount: 65.20, date: new Date(Date.now()-86400000).toISOString().split('T')[0], category: 'Food', paymentMethod: 'Credit Card' },
+            { id: '3', title: 'Subway Pass', amount: 85.00, date: new Date(Date.now()-172800000).toISOString().split('T')[0], category: 'Transport', paymentMethod: 'Credit Card' }
         ];
+
+        let monthlyBudget = parseFloat(localStorage.getItem('monthlyBudget')) || 500.00;
+        let selectedCategoryFilter = null;
 
         let trendChartInstance = null;
         let categoryChartInstance = null;
+        let gaugeChartInstance = null;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Set default month selector value to current year-month
             const now = new Date();
             const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             document.getElementById('trendMonthSelect').value = yearMonth;
             document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('budgetLimitText').innerText = `$${monthlyBudget.toFixed(2)}`;
 
             updateAll();
         });
 
         function updateAll() {
             localStorage.setItem('expenses', JSON.stringify(expenses));
+            localStorage.setItem('monthlyBudget', monthlyBudget);
             updateKPIs();
             updateCharts();
             renderTransactions();
+            updateFilterBadgeUI();
         }
 
-        function scrollToTransactions() {
-            document.getElementById('searchInput').scrollIntoView({ behavior: 'smooth' });
+        function scrollToHistory() {
+            document.getElementById('transactionsSection').scrollIntoView({ behavior: 'smooth' });
         }
 
         function toggleMenu() {
             document.getElementById('dropdownMenu').classList.toggle('hidden');
         }
 
-        // Close dropdown when clicking outside
         window.addEventListener('click', (e) => {
             if (!e.target.closest('#dropdownMenu') && !e.target.closest('button[onclick="toggleMenu()"]')) {
                 document.getElementById('dropdownMenu').classList.add('hidden');
@@ -321,8 +351,7 @@
             if (id) {
                 expenses = expenses.map(ex => ex.id === id ? { id, title, amount, date, category, paymentMethod } : ex);
             } else {
-                const newEx = { id: Date.now().toString(), title, amount, date, category, paymentMethod };
-                expenses.push(newEx);
+                expenses.push({ id: Date.now().toString(), title, amount, date, category, paymentMethod });
             }
 
             closeModal();
@@ -336,14 +365,52 @@
             }
         }
 
+        function promptBudgetThreshold() {
+            const input = prompt("Set monthly budget threshold ($):", monthlyBudget);
+            if (input !== null && !isNaN(input) && Number(input) > 0) {
+                monthlyBudget = parseFloat(input);
+                document.getElementById('budgetLimitText').innerText = `$${monthlyBudget.toFixed(2)}`;
+                updateAll();
+            }
+        }
+
+        function filterByCategory(cat) {
+            selectedCategoryFilter = cat;
+            document.getElementById('filterCategory').value = cat || "";
+            updateAll();
+        }
+
+        function onCategorySelectFilter(val) {
+            selectedCategoryFilter = val || null;
+            updateAll();
+        }
+
+        function clearCategoryFilter() {
+            selectedCategoryFilter = null;
+            document.getElementById('filterCategory').value = "";
+            updateAll();
+        }
+
+        function updateFilterBadgeUI() {
+            const badge = document.getElementById('activeFilterBadge');
+            const badgeText = document.getElementById('filterBadgeText');
+            if (selectedCategoryFilter) {
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+                badgeText.innerText = `Filter: ${selectedCategoryFilter}`;
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+        }
+
         function updateKPIs() {
             const total = expenses.reduce((sum, ex) => sum + ex.amount, 0);
             document.getElementById('kpiTotal').innerText = `$${total.toFixed(2)}`;
 
             const now = new Date();
             const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-            document.getElementById('kpiMonthName').innerText = monthName;
+            document.getElementById('kpiMonthName').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
 
             const monthExpenses = expenses.filter(ex => ex.date.startsWith(currentMonthStr));
             const monthTotal = monthExpenses.reduce((sum, ex) => sum + ex.amount, 0);
@@ -353,44 +420,77 @@
             const dailyAvg = dayOfMonth > 0 ? monthTotal / dayOfMonth : 0;
             document.getElementById('kpiDailyAvg').innerText = `$${dailyAvg.toFixed(2)}`;
 
-            // Top Category
-            const catTotals = {};
-            monthExpenses.forEach(ex => {
-                catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount;
-            });
-            let topCat = 'None';
-            let topAmt = 0;
-            for (const [cat, amt] of Object.entries(catTotals)) {
-                if (amt > topAmt) {
-                    topAmt = amt;
-                    topCat = cat;
+            // Gauge chart values
+            const pct = monthlyBudget > 0 ? Math.min(Math.round((monthTotal / monthlyBudget) * 100), 100) : 0;
+            document.getElementById('gaugePercentage').innerText = `${pct}%`;
+
+            const ctxGauge = document.getElementById('gaugeChart').getContext('2d');
+            if (gaugeChartInstance) gaugeChartInstance.destroy();
+
+            const gaugeSpent = Math.min(monthTotal, monthlyBudget);
+            const gaugeRemaining = Math.max(monthlyBudget - monthTotal, 0);
+
+            gaugeChartInstance = new Chart(ctxGauge, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: monthTotal >= monthlyBudget ? [monthlyBudget, 0] : [gaugeSpent, gaugeRemaining],
+                        backgroundColor: [monthTotal > monthlyBudget ? '#ef4444' : '#3b82f6', '#1e293b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    circumference: 180,
+                    rotation: 270,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    cutout: '75%'
                 }
-            }
-            document.getElementById('kpiTopCategory').innerText = topCat;
-            document.getElementById('kpiTopCatAmount').innerText = `$${topAmt.toFixed(2)} spent`;
+            });
         }
 
         function updateCharts() {
             const selectedYM = document.getElementById('trendMonthSelect').value;
-            
-            // --- Trend Chart ---
+            const viewMode = document.getElementById('trendViewMode').value;
             const [year, month] = selectedYM.split('-').map(Number);
-            const daysInMonth = new Date(year, month, 0).getDate();
-            
-            const dailySums = {};
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayStr = `${selectedYM}-${String(i).padStart(2, '0')}`;
-                dailySums[dayStr] = 0;
-            }
 
-            expenses.filter(ex => ex.date.startsWith(selectedYM)).forEach(ex => {
-                if (dailySums[ex.date] !== undefined) {
-                    dailySums[ex.date] += ex.amount;
-                }
+            // Filter data by month and optional category filter
+            const monthExpenses = expenses.filter(ex => {
+                const matchMonth = ex.date.startsWith(selectedYM);
+                const matchCat = selectedCategoryFilter ? ex.category === selectedCategoryFilter : true;
+                return matchMonth && matchCat;
             });
 
-            const labels = Object.keys(dailySums).map(d => parseInt(d.split('-')[2]));
-            const data = Object.values(dailySums);
+            // --- Trend Chart ---
+            let labels = [];
+            let data = [];
+
+            if (viewMode === 'daily') {
+                const daysInMonth = new Date(year, month, 0).getDate();
+                const dailySums = {};
+                for (let i = 1; i <= daysInMonth; i++) {
+                    dailySums[`${selectedYM}-${String(i).padStart(2, '0')}`] = 0;
+                }
+                monthExpenses.forEach(ex => {
+                    if (dailySums[ex.date] !== undefined) dailySums[ex.date] += ex.amount;
+                });
+                labels = Object.keys(dailySums).map(d => parseInt(d.split('-')[2]));
+                data = Object.values(dailySums);
+            } else {
+                // Weekly aggregation
+                const weeks = { 'Week 1': 0, 'Week 2': 0, 'Week 3': 0, 'Week 4': 0, 'Week 5': 0 };
+                monthExpenses.forEach(ex => {
+                    const day = parseInt(ex.date.split('-')[2]);
+                    if (day <= 7) weeks['Week 1'] += ex.amount;
+                    else if (day <= 14) weeks['Week 2'] += ex.amount;
+                    else if (day <= 21) weeks['Week 3'] += ex.amount;
+                    else if (day <= 28) weeks['Week 4'] += ex.amount;
+                    else weeks['Week 5'] += ex.amount;
+                });
+                labels = Object.keys(weeks);
+                data = Object.values(weeks);
+            }
 
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             if (trendChartInstance) trendChartInstance.destroy();
@@ -400,7 +500,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Daily Spending',
+                        label: 'Spending',
                         data: data,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -422,10 +522,10 @@
                 }
             });
 
-            // --- Category Doughnut Chart (Current Month) ---
-            const monthExpenses = expenses.filter(ex => ex.date.startsWith(selectedYM));
+            // --- Category Breakdown Doughnut Chart (Based on Month only) ---
+            const rawMonthExpenses = expenses.filter(ex => ex.date.startsWith(selectedYM));
             const catTotals = {};
-            monthExpenses.forEach(ex => {
+            rawMonthExpenses.forEach(ex => {
                 catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount;
             });
 
@@ -443,7 +543,8 @@
                     datasets: [{
                         data: catData,
                         backgroundColor: catColors,
-                        borderWidth: 0,
+                        borderWidth: selectedCategoryFilter ? catLabels.map(c => c === selectedCategoryFilter ? 3 : 0) : 0,
+                        borderColor: '#ffffff',
                         hoverOffset: 4
                     }]
                 },
@@ -451,37 +552,49 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    cutout: '70%'
+                    cutout: '70%',
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const clickedCat = catLabels[index];
+                            filterByCategory(selectedCategoryFilter === clickedCat ? null : clickedCat);
+                        }
+                    }
                 }
             });
 
-            // Render Custom Legend
+            // Render Custom Legend with click handlers
             const totalMonthExp = catData.reduce((a, b) => a + b, 0);
             const legendContainer = document.getElementById('categoryLegend');
             legendContainer.innerHTML = '';
             catLabels.forEach((cat, index) => {
                 const amt = catData[index];
-                if (amt > 0) {
+                if (amt > 0 || !selectedCategoryFilter) {
                     const pct = totalMonthExp > 0 ? ((amt / totalMonthExp) * 100).toFixed(1) : 0;
+                    const isSelected = selectedCategoryFilter === cat;
                     legendContainer.innerHTML += `
-                        <div class="flex items-center justify-between">
+                        <div onclick="filterByCategory('${isSelected ? '' : cat}')" class="flex items-center justify-between p-2 rounded-xl cursor-pointer transition ${isSelected ? 'bg-blue-500/20 border border-blue-500/40' : 'hover:bg-slate-800/60'}">
                             <div class="flex items-center space-x-2 truncate">
-                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${catColors[index]}"></span>
-                                <span class="text-slate-300 truncate">${cat}</span>
+                                <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${catColors[index]}"></span>
+                                <span class="text-slate-200 font-medium truncate">${cat}</span>
                             </div>
-                            <div class="font-medium text-slate-200">$${amt.toFixed(2)} <span class="text-slate-500 text-[10px]">(${pct}%)</span></div>
+                            <div class="font-semibold text-slate-100">$${amt.toFixed(2)} <span class="text-slate-400 text-[10px]">(${pct}%)</span></div>
                         </div>
                     `;
                 }
             });
-            if (totalMonthExp === 0) {
-                legendContainer.innerHTML = `<p class="text-slate-500 text-center py-4">No expenses recorded for this month.</p>`;
+            if (selectedCategoryFilter) {
+                legendContainer.innerHTML += `
+                    <button onclick="clearCategoryFilter()" class="w-full mt-2 py-2 text-center text-xs text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition font-medium">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Reset Category Filter (${selectedCategoryFilter})
+                    </button>
+                `;
             }
         }
 
         function renderTransactions() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const catFilter = document.getElementById('filterCategory').value;
+            const catFilter = selectedCategoryFilter || document.getElementById('filterCategory').value;
 
             const filtered = expenses.filter(ex => {
                 const matchTitle = ex.title.toLowerCase().includes(search);
