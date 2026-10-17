@@ -89,7 +89,8 @@
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-3 py-3 w-full flex-grow space-y-3">
 
-        <div class="grid grid-cols-3 gap-2">
+        <!-- Top KPI Summary Cards (4 Columns Now) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
                     <span>Today</span>
@@ -119,6 +120,16 @@
                 </div>
                 <div id="kpiDailyAvg" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
             </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-xl p-2.5 sm:p-3 relative overflow-hidden">
+                <div class="flex items-center justify-between text-[10px] text-indigo-400 font-medium uppercase tracking-wider">
+                    <span>Weekly Avg</span>
+                    <div class="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-column text-[10px]"></i>
+                    </div>
+                </div>
+                <div id="kpiWeeklyAvg" class="text-base sm:text-lg font-bold mt-1 text-slate-100">$0.00</div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -129,7 +140,7 @@
                         <button onclick="resetTrendZoom()" title="Reset Zoom" class="text-[9px] text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded transition">Reset Zoom</button>
                     </div>
                     <div class="flex items-center space-x-1.5">
-                        <select id="trendViewMode" class="bg-slate-800 border border-slate-700 text-[10px] rounded-lg px-2 py-1 text-slate-300 focus:outline-none" onchange="updateCharts()">
+                        <select id="trendViewMode" class="bg-slate-800 border border-slate-700 text-[10px] rounded-lg px-2 py-1 text-slate-300 focus:outline-none" onchange="updateAll()">
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                         </select>
@@ -301,7 +312,7 @@
             if (!inputEl.value) {
                 inputEl.value = getCurrentYearMonth();
             }
-            updateCharts();
+            updateAll();
         };
 
         window.resetTrendZoom = function() {
@@ -445,7 +456,15 @@
 
         function updateKPIs() {
             const todayStr = getTodayDateString();
-            const todayExp = window.expenses.filter(ex => ex.date === todayStr);
+            
+            // Filter global dataset by category first for cross-filtering KPIs & gauges
+            const baseFiltered = window.expenses.filter(ex => {
+                if (!ex.date || ex.date > todayStr) return false;
+                if (selectedCategoryFilter && ex.category !== selectedCategoryFilter) return false;
+                return true;
+            });
+
+            const todayExp = baseFiltered.filter(ex => ex.date === todayStr);
             const todayTotal = todayExp.reduce((s, ex) => s + ex.amount, 0);
             document.getElementById('kpiToday').innerText = `$${todayTotal.toFixed(2)}`;
 
@@ -455,7 +474,7 @@
 
             document.getElementById('kpiMonthName').innerText = new Date(selYear, selMonth - 1, 1).toLocaleString('default', { month: 'short' });
 
-            const monthExp = window.expenses.filter(ex => ex.date && ex.date.startsWith(selectedYM));
+            const monthExp = baseFiltered.filter(ex => ex.date && ex.date.startsWith(selectedYM));
             const monthTotal = monthExp.reduce((s, ex) => s + ex.amount, 0);
             document.getElementById('kpiMonth').innerText = `$${monthTotal.toFixed(2)}`;
 
@@ -471,6 +490,11 @@
 
             const dailyAvg = elapsedDays > 0 ? monthTotal / elapsedDays : 0;
             document.getElementById('kpiDailyAvg').innerText = `$${dailyAvg.toFixed(2)}`;
+
+            // Weekly Average calculation based on elapsed weeks / completed weeks in month
+            const elapsedWeeks = elapsedDays > 0 ? Math.max(elapsedDays / 7, 1) : 1;
+            const weeklyAvg = monthTotal / elapsedWeeks;
+            document.getElementById('kpiWeeklyAvg').innerText = `$${weeklyAvg.toFixed(2)}`;
 
             const pct = window.monthlyBudget > 0 ? Math.min(Math.round((monthTotal / window.monthlyBudget) * 100), 100) : 0;
             document.getElementById('gaugePercentage').innerText = `${pct}%`;
@@ -520,6 +544,8 @@
                 labels = Object.keys(sums).map(d => parseInt(d.split('-')[2]));
                 data = Object.values(sums);
             } else {
+                // Correct weekly calculation aligned by calendar weeks of the specific month
+                // W1: Days 1-7, W2: Days 8-14, W3: Days 15-21, W4: Days 22-28, W5: Day 29+
                 const weeks = { 'W1': 0, 'W2': 0, 'W3': 0, 'W4': 0, 'W5': 0 };
                 filteredExp.forEach(ex => {
                     const d = parseInt(ex.date.split('-')[2]);
@@ -529,7 +555,8 @@
                     else if (d <= 28) weeks['W4'] += ex.amount;
                     else weeks['W5'] += ex.amount;
                 });
-                labels = Object.keys(weeks); data = Object.values(weeks);
+                labels = Object.keys(weeks); 
+                data = Object.values(weeks);
             }
 
             if (trendChartInstance) trendChartInstance.destroy();
@@ -571,7 +598,8 @@
                 }
             });
 
-            const rawMonth = window.expenses.filter(ex => ex.date && ex.date.startsWith(selectedYM));
+            // Category doughnut chart should reflect the selected month range filter
+            const rawMonth = window.expenses.filter(ex => ex.date && ex.date.startsWith(selectedYM) && ex.date <= todayStr);
             const catTotals = {};
             rawMonth.forEach(ex => { catTotals[ex.category] = (catTotals[ex.category] || 0) + ex.amount; });
 
@@ -605,11 +633,17 @@
             });
         }
 
-        function renderTransactions() {
+        window.renderTransactions = function() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const catF = selectedCategoryFilter || document.getElementById('filterCategory').value;
+            const selectedYM = document.getElementById('trendMonthSelect').value || getCurrentYearMonth();
             
-            const filtered = window.expenses.filter(ex => ex.title && ex.date && ex.title.toLowerCase().includes(search) && (!catF || ex.category === catF)).sort((a, b) => new Date(b.date) - new Date(a.date));
+            const filtered = window.expenses.filter(ex => {
+                if (!ex.title || !ex.date) return false;
+                if (!ex.date.startsWith(selectedYM)) return false; // Cross-filtered by month selector
+                if (catF && ex.category !== catF) return false;
+                return ex.title.toLowerCase().includes(search);
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
             const list = document.getElementById('transactionList');
             list.innerHTML = filtered.length === 0 ? `<div class="py-4 text-center text-slate-500 text-xs">No records</div>` : '';
